@@ -37,9 +37,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const items = data.inventario_bajo || [];
                 if (contenedor) {
                     if (items.length === 0) {
-                        contenedor.innerHTML = "<p style='color: #3A8F5B;'>Todo el inventario está en niveles óptimos.</p>";
+                        contenedor.innerHTML = "<p class='ok-message'><i class='fa-solid fa-circle-check'></i> Todo el inventario está en niveles óptimos.</p>";
                     } else {
-                        contenedor.innerHTML = items.map(i => `<div style='padding: 6px 0; border-bottom: 1px solid #F0F6F7;'><strong>${i.producto}</strong>: ${i.existencia} en existencia (Mín: ${i.minimo})</div>`).join("");
+                        contenedor.innerHTML = items.map(i => `<div class="panel-row"><strong>${i.producto}</strong><span class="stock-tag">${i.existencia} disp · mín ${i.minimo}</span></div>`).join("");
                     }
                 }
             })
@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (items.length === 0) {
                         contenedor.innerHTML = "<p>Sin ventas registradas aún.</p>";
                     } else {
-                        contenedor.innerHTML = items.map(p => `<div style='padding: 6px 0; border-bottom: 1px solid #F0F6F7;'><strong>${p.producto}</strong> — ${p.unidades} un. (Q${p.ingresos.toLocaleString()})</div>`).join("");
+                        contenedor.innerHTML = items.map(p => `<div class="panel-row"><strong>${p.producto}</strong><span>${p.unidades} un · Q${p.ingresos.toLocaleString()}</span></div>`).join("");
                     }
                 }
             })
@@ -84,13 +84,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Devuelve una línea legible con el detalle de una operación detectada.
         const t = op.operacion;
         if (op.tipo === "venta") {
-            return `Venta · ${t.producto} × ${t.cantidad} a Q${t.precio_unitario}`;
+            return `<i class="fa-solid fa-cash-register" style="color:var(--green);"></i> Venta · ${t.producto} × ${t.cantidad} a Q${t.precio_unitario}`;
         } else if (op.tipo === "gasto") {
-            return `Gasto · ${t.concepto || t.descripcion || "gasto"} por Q${t.monto}`;
+            return `<i class="fa-solid fa-receipt" style="color:#cc0000;"></i> Gasto · ${t.concepto || t.descripcion || "gasto"} por Q${t.monto}`;
         } else if (op.tipo === "inventario") {
-            return `Inventario · ${t.producto} (${t.existencia} u.)`;
+            return `<i class="fa-solid fa-boxes-stacked" style="color:var(--blue-main);"></i> Inventario · ${t.producto} (${t.existencia} u.)`;
         } else if (op.tipo === "produccion") {
-            return `Producción · ${t.cantidad} u. de ${t.producto}`;
+            return `<i class="fa-solid fa-industry" style="color:var(--blue-dark);"></i> Producción · ${t.cantidad} u. de ${t.producto}`;
         }
         return `Operación · ${op.tipo}`;
     }
@@ -124,10 +124,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 let detalleHtml = "";
                 operaciones.forEach((op) => {
-                    detalleHtml += `<div style="padding: 8px 0; border-bottom: 1px solid #F0F6F7;">${_descripcionOperacion(op)}</div>`;
+                    detalleHtml += `<div class="op-row">${_descripcionOperacion(op)}</div>`;
                 });
+                detalleHtml = `<div class="op-list">${detalleHtml}</div>`;
+
                 if ((body.multiples || operaciones.length > 1)) {
-                    detalleHtml += `<div style="padding-top: 8px; color: #5B7076;">Se detectaron ${operaciones.length} operaciones.</div>`;
+                    detalleHtml += `<div style="padding-top: 8px; color: #5B7076;"><i class="fa-solid fa-info-circle"></i> Se detectaron ${operaciones.length} operaciones.</div>`;
                 }
 
                 chatDetalles.innerHTML = detalleHtml;

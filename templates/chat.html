@@ -1,26 +1,58 @@
 {% extends "base_private.html" %}
+{% block nav_chat %}active{% endblock %}
 {% block content %}
-<div style="text-align: center; margin-bottom: 30px;">
-    <span style="background-color: #E9F8FB; color: #105465; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;">
-        🤖 Asistente IA · GuateAyuda
-    </span>
-    <h2 style="color: #105465; font-size: 2.2rem; margin-top: 15px;">¿Qué ocurrió hoy en tu negocio?</h2>
+<div class="page-head">
+    <div>
+        <span class="page-badge"><i class="fa-solid fa-robot"></i> Asistente IA · GuateAyuda</span>
+        <h1>¿Qué ocurrió hoy en tu negocio?</h1>
+        <p>Escribe en lenguaje natural y GuateAyuda registrará la operación por ti.</p>
+    </div>
 </div>
 
-<div style="max-width: 750px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-    <div style="display: flex; gap: 12px; margin-bottom: 25px;">
-        <input type="text" id="chat-mensaje" placeholder="Ej: 'Vendí 8 almuerzos a Q25'..." style="flex: 1; padding: 14px 16px; border: 1.5px solid #DCEBED; border-radius: 10px; font-size: 1rem; outline: none;">
-        <button id="btn-enviar-chat" style="background: #3EBFE0; border: none; color: white; padding: 0 24px; border-radius: 10px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-paper-plane"></i></button>
-    </div>
-
-    <div id="chat-resultado-container" style="display: none; background: #F7FBFC; border: 1px dashed #3EBFE0; padding: 20px; border-radius: 12px;">
-        <h3 style="color: #105465; margin-bottom: 12px; font-size: 1.1rem;">✨ Información Detectada:</h3>
-        <div id="chat-detalles" style="color: #041216; font-size: 0.95rem; margin-bottom: 20px; line-height: 1.6;"></div>
-        <div style="display: flex; gap: 15px;">
-            <button id="btn-confirmar" style="background: #3A8F5B; border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">[ Confirmar ]</button>
-            <button id="btn-corregir" style="background: #cc0000; border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">[ Corregir ]</button>
+<div class="chat-card">
+    <div class="chat-card-header">
+        <div class="chat-bot"><i class="fa-solid fa-robot"></i></div>
+        <div>
+            <h3>Asistente de GuateAyuda</h3>
+            <span>Online · responde a tus operaciones</span>
         </div>
     </div>
-    <div id="chat-status" style="margin-top: 15px; text-align: center; color: #5B7076; font-size: 0.9rem;"></div>
+    <div class="chat-card-body">
+        <div class="chat-input-row">
+            <input type="text" id="chat-mensaje" placeholder="Ej: 'Vendí 8 almuerzos a Q25'..." autocomplete="off">
+            <button id="btn-enviar-chat" aria-label="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+
+        <div id="chat-resultado-container" class="chat-result">
+            <h4><i class="fa-solid fa-sparkles"></i> Información detectada</h4>
+            <div id="chat-detalles"></div>
+            <div class="chat-actions">
+                <button id="btn-confirmar" class="btn-confirm"><i class="fa-solid fa-check"></i> Confirmar</button>
+                <button id="btn-corregir" class="btn-correct"><i class="fa-solid fa-pen"></i> Corregir</button>
+            </div>
+        </div>
+
+        <div id="chat-status" class="chat-status"></div>
+
+        <div class="chat-suggestions" id="chat-sugerencias">
+            <span class="chip" data-msg="Vendí 8 almuerzos a Q25">Vendí 8 almuerzos a Q25</span>
+            <span class="chip" data-msg="Gasté Q150 comprando verduras">Gasté Q150 comprando verduras</span>
+            <span class="chip" data-msg="Me quedan 10 gaseosas">Me quedan 10 gaseosas</span>
+            <span class="chip" data-msg="Se fabricaron 24 unidades de vasos">Se fabricaron 24 unidades de vasos</span>
+        </div>
+    </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Las sugerencias rellenan el input (sin enviar automáticamente).
+        var chips = document.querySelectorAll("#chat-sugerencias .chip");
+        chips.forEach(function (chip) {
+            chip.addEventListener("click", function () {
+                var input = document.getElementById("chat-mensaje");
+                if (input) input.value = chip.getAttribute("data-msg");
+            });
+        });
+    });
+</script>
 {% endblock %}

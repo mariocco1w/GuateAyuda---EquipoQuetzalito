@@ -3,21 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="negocio-id" content="{{ session.get('negocio_id') }}">
-    <title>Dashboard | GuateAyuda</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>{% block title %}GuateAyuda{% endblock %} | Empresario</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Pacifico&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='private.css') }}">
+    {% block head_extra %}{% endblock %}
 </head>
-<body style="display: flex;">
-    <aside class="sidebar">
-        <div class="logo"><span class="logo-guate">Guate</span><span class="logo-ayuda">Ayuda</span></div>
-        <nav class="navigation">
-            <a href="/dashboard" class="nav-item">Dashboard</a>
-            <a href="/chat" class="nav-item">Chat IA</a>
-            <a href="/reportes" class="nav-item">Reportes</a>
-            <a href="/logout" class="nav-item">Salir</a>
+<body class="private-body">
+    <aside class="private-sidebar">
+        <div class="logo"><span>Guate</span><span class="logo-ayuda">Ayuda</span></div>
+        <div class="sidebar-title">Menú</div>
+        <nav class="private-nav">
+            <a href="/dashboard" class="nav-item {% block nav_dashboard %}{% endblock %}"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+            <a href="/chat" class="nav-item {% block nav_chat %}{% endblock %}"><i class="fa-solid fa-robot"></i><span>Chat IA</span></a>
+            <a href="/reportes" class="nav-item"><i class="fa-solid fa-file-lines"></i><span>Reportes</span></a>
+            <a href="/empresa/configuracion" class="nav-item"><i class="fa-solid fa-gear"></i><span>Configuración</span></a>
+            <a href="/logout" class="nav-item logout"><i class="fa-solid fa-right-from-bracket"></i><span>Salir</span></a>
         </nav>
     </aside>
-    <main class="main-content" style="flex: 1; padding: 40px; background: #F7FBFC;">
+    <main class="private-main">
         {% block content %}{% endblock %}
     </main>
     <script src="{{ url_for('static', filename='script.js') }}"></script>

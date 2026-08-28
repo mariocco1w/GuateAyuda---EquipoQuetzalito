@@ -1,6 +1,31 @@
 {% extends "base_private.html" %}
 {% block content %}
-<h2>Configuración de Empresa</h2>
-<p>Gestiona los datos de tu negocio.</p>
-<!-- Formulario de configuración aquí -->
+<div class="page-head">
+    <div>
+        <span class="page-badge"><i class="fa-solid fa-building"></i> Configuración</span>
+        <h1>Perfil de tu Empresa</h1>
+        <p>Consulta los datos registrados de tu negocio.</p>
+    </div>
+</div>
+
+<div style="max-width: 780px; margin: 0 auto;">
+    <div class="panel-card">
+        <div class="panel-header">
+            <i class="fa-solid fa-circle-info" style="color: #3EBFE0;"></i>
+            <h3>Información empresarial</h3>
+        </div>
+        <div class="panel-body">
+            <div class="panel-row"><strong>Nombre</strong><span>{{ negocio.nombre if negocio else "—" }}</span></div>
+            <div class="panel-row"><strong>Propietario</strong><span>{{ negocio.propietario if negocio and negocio.propietario else "—" }}</span></div>
+            <div class="panel-row"><strong>Actividad principal</strong><span>{{ negocio.actividad_principal if negocio and negocio.actividad_principal else "—" }}</span></div>
+            <div class="panel-row"><strong>Ubicación</strong><span>{{ (negocio.municipio if negocio and negocio.municipio else '') ~ ((", " ~ negocio.departamento) if negocio and negocio.departamento else '') if negocio else "—" }}</span></div>
+            <div class="panel-row"><strong>Descripción</strong><span>{{ negocio.descripcion if negocio and negocio.descripcion else "—" }}</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="chat-suggestions" style="justify-content: center; margin-top: 30px;">
+    <a href="/dashboard" class="chip"><i class="fa-solid fa-chart-pie"></i> Ir al Dashboard</a>
+    <a href="/chat" class="chip"><i class="fa-solid fa-robot"></i> Revisar Chat IA</a>
+</div>
 {% endblock %}

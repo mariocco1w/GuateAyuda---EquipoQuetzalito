@@ -1,46 +1,64 @@
 {% extends "base_private.html" %}
+{% block nav_dashboard %}active{% endblock %}
 {% block content %}
-<div style="text-align: center; margin-bottom: 30px;">
-    <span style="background-color: #E9F8FB; color: #105465; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;">
-        📊 {{ negocio.nombre }} · Panel de Control
-    </span>
-    <h2 style="color: #105465; font-size: 2.2rem; margin-top: 15px;">Dashboard</h2>
-    <p style="color: #5B7076;">{{ negocio.descripcion }}</p>
+<div class="page-head">
+    <div>
+        <span class="page-badge"><i class="fa-solid fa-chart-pie"></i> {{ negocio.nombre }}</span>
+        <h1>Dashboard Empresarial</h1>
+        <p>{{ negocio.descripcion }}</p>
+    </div>
 </div>
 
 <!-- Tarjetas KPI -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto 30px auto;">
-    <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-        <div style="color: #5B7076; font-size: 0.9rem; margin-bottom: 8px;">Ventas Registradas</div>
-        <div id="kpi-ventas" style="color: #105465; font-size: 1.8rem; font-weight: bold;">Q0.00</div>
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon"><i class="fa-solid fa-sack-dollar"></i></div>
+        <div>
+            <div class="kpi-label">Ventas Registradas</div>
+            <div id="kpi-ventas" class="kpi-value">Q0.00</div>
+        </div>
     </div>
-    <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-        <div style="color: #5B7076; font-size: 0.9rem; margin-bottom: 8px;">Gastos Registrados</div>
-        <div id="kpi-gastos" style="color: #cc0000; font-size: 1.8rem; font-weight: bold;">Q0.00</div>
+    <div class="kpi-card">
+        <div class="kpi-icon red"><i class="fa-solid fa-arrow-trend-down"></i></div>
+        <div>
+            <div class="kpi-label">Gastos Registrados</div>
+            <div id="kpi-gastos" class="kpi-value red">Q0.00</div>
+        </div>
     </div>
-    <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-        <div style="color: #5B7076; font-size: 0.9rem; margin-bottom: 8px;">Operaciones</div>
-        <div id="kpi-operaciones" style="color: #3A8F5B; font-size: 1.8rem; font-weight: bold;">0</div>
+    <div class="kpi-card">
+        <div class="kpi-icon green"><i class="fa-solid fa-list-check"></i></div>
+        <div>
+            <div class="kpi-label">Operaciones</div>
+            <div id="kpi-operaciones" class="kpi-value green">0</div>
+        </div>
     </div>
-    <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-        <div style="color: #5B7076; font-size: 0.9rem; margin-bottom: 8px;">Productos Activos</div>
-        <div id="kpi-productos" style="color: #3EBFE0; font-size: 1.8rem; font-weight: bold;">0</div>
+    <div class="kpi-card">
+        <div class="kpi-icon cyan"><i class="fa-solid fa-box-open"></i></div>
+        <div>
+            <div class="kpi-label">Productos Activos</div>
+            <div id="kpi-productos" class="kpi-value">0</div>
+        </div>
     </div>
 </div>
 
-<!-- Alertas -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; max-width: 1100px; margin: 0 auto;">
-    <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED;">
-        <h3 style="color: #105465; margin-bottom: 15px; font-size: 1.2rem;"><i class="fa-solid fa-triangle-exclamation" style="color: #cc0000; margin-right: 8px;"></i> Inventario Bajo</h3>
-        <div id="lista-inventario-bajo" style="color: #5B7076; font-size: 0.95rem;">Cargando inventario...</div>
+<!-- Paneles -->
+<div class="panel-grid">
+    <div class="panel-card">
+        <div class="panel-header">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #cc0000;"></i>
+            <h3>Inventario Bajo</h3>
+        </div>
+        <div class="panel-body" id="lista-inventario-bajo">Cargando inventario...</div>
     </div>
-    <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED;">
-        <h3 style="color: #105465; margin-bottom: 15px; font-size: 1.2rem;"><i class="fa-solid fa-star" style="color: #3EBFE0; margin-right: 8px;"></i> Top Productos</h3>
-        <div id="lista-top-productos" style="color: #5B7076; font-size: 0.95rem;">Cargando top productos...</div>
+    <div class="panel-card">
+        <div class="panel-header">
+            <i class="fa-solid fa-star" style="color: #3EBFE0;"></i>
+            <h3>Top Productos</h3>
+        </div>
+        <div class="panel-body" id="lista-top-productos">Cargando top productos...</div>
     </div>
 </div>
 <script>
-    // Inicializar dashboard al cargar la página
     document.addEventListener("DOMContentLoaded", cargarDashboard);
 </script>
 {% endblock %}

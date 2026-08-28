@@ -128,7 +128,9 @@ def logout():
 @app.route("/empresa/configuracion", methods=["GET", "POST"])
 @login_required
 def configuracion_empresa():
-    return render_template("configuracion.html")
+    negocio_id = session.get("negocio_id")
+    negocio = db.query_one("SELECT * FROM negocio WHERE id = %s", (negocio_id,))
+    return render_template("configuracion.html", negocio=negocio)
 
 
 @app.get("/dashboard")
