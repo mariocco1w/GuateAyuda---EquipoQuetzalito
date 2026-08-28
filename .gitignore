@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+
+# Base de datos local (producción usa PostgreSQL de Render)
+guateayuda.db

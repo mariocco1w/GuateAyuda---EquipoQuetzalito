@@ -18,6 +18,7 @@ Uso:
 from flask import Flask, jsonify, render_template, request, session, redirect, url_for, g, send_file
 import functools
 import io
+import os
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -39,7 +40,8 @@ import interpreter
 import service
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # En producción, usar variable de entorno
+# En producción usar variable de entorno SECRET_KEY; fallback para desarrollo.
+app.secret_key = os.environ.get("SECRET_KEY", "supersecretkey")
 
 
 def login_required(f):
@@ -94,10 +96,26 @@ def login():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        # Simulación simple de registro
-        session["user_id"] = 1
-        session["negocio_id"] = 1
-        return redirect(url_for("configuracion_empresa"))
+        nombre = request.form.get("nombre")
+        propietario = request.form.get("propietario")
+        actividad = request.form.get("actividad_principal")
+        descripcion = request.form.get("descripcion")
+        depto = request.form.get("departamento")
+        mun = request.form.get("municipio")
+        
+        # Insertar negocio
+        db.execute(
+            "INSERT INTO negocio (nombre, propietario, actividad_principal, descripcion, departamento, municipio) VALUES (%s, %s, %s, %s, %s, %s)",
+            (nombre, propietario, actividad, descripcion, depto, mun)
+        )
+        
+        # Obtener el ID del negocio recién insertado
+        fila = db.query_one("SELECT id FROM negocio WHERE nombre = %s ORDER BY creado_en DESC LIMIT 1", (nombre,))
+        negocio_id = fila["id"]
+        
+        session["user_id"] = 1 # Simulación de usuario
+        session["negocio_id"] = negocio_id
+        return redirect(url_for("dashboard_view"))
     return render_template("register.html")
 
 
@@ -116,7 +134,9 @@ def configuracion_empresa():
 @app.get("/dashboard")
 @login_required
 def dashboard_view():
-    return render_template("dashboard.html")
+    negocio_id = session.get("negocio_id")
+    negocio = db.query_one("SELECT * FROM negocio WHERE id = %s", (negocio_id,))
+    return render_template("dashboard.html", negocio=negocio)
 
 
 @app.get("/chat")
@@ -304,21 +324,40 @@ def chat(negocio_id):
     except Exception as exc:
         return _bd_error(exc)
 
-    resultado = interpreter.interpretar(mensaje)
+    resultados = interpreter.interpretar_multiples(mensaje)
 
-    if not resultado.get("interpretado"):
-        return jsonify(resultado), 422
+    # Filtramos solo las operaciones interpretadas correctamente.
+    validos = [r for r in resultados if r.get("interpretado")]
 
-    # Crear la sesión pendiente de confirmación.
-    token = service.nueva_sesion(resultado["operacion"])
+    if not validos:
+        # Devolver el primer resultado no interpretado (mensaje de ayuda).
+        return jsonify(resultados[0]), 422
 
+    # Crear una sesión de confirmación por cada operación detectada.
+    operaciones = []
+    for r in validos:
+        token = service.nueva_sesion(r["operacion"])
+        operaciones.append({
+            "token_sesion": token,
+            "tipo": r["tipo"],
+            "operacion": r["operacion"],
+            "mensaje_humano": r.get("mensaje_humano", mensaje),
+            "errores": r.get("errores", []),
+        })
+
+    # Respuesta con forma completa (lista) y compatibilidad con la forma
+    # simple previa apuntando a la primera operación.
+    primer = operaciones[0]
     return jsonify({
         "interpretado": True,
-        "token_sesion": token,
-        "tipo": resultado["tipo"],
-        "operacion": resultado["operacion"],
-        "mensaje_humano": mensaje,
-        "errores": resultado.get("errores", []),
+        "multiples": len(operaciones) > 1,
+        "operaciones": operaciones,
+        # Compatibilidad: forma simple para clientes existentes.
+        "tipo": primer["tipo"],
+        "operacion": primer["operacion"],
+        "token_sesion": primer["token_sesion"],
+        "mensaje_humano": primer["mensaje_humano"],
+        "errores": primer["errores"],
     })
 
 
@@ -355,4 +394,9 @@ def confirmar_operacion(negocio_id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # En el host (Render/Railway) la variable PORT la inyecta la plataforma.
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=os.environ.get("FLASK_DEBUG", "false").lower() in ("1", "true"),
+    )

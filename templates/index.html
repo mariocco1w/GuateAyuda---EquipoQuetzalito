@@ -3,28 +3,427 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GuateAyuda | Conectamos oportunidades</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <meta name="description" content="GuateAyuda: plataforma digital para MIPYMES y pequeños empresarios. Registra, comprende y haz crecer tu negocio con asistencia inteligente.">
+    <title>GuateAyuda | Plataforma digital para MIPYMES</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Pacifico&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
 </head>
-<body>
-    <header style="padding: 20px 8%; display: flex; justify-content: space-between; align-items: center; background: #0A333D; color: white;">
-        <div class="logo">Guate<span style="color:#3EBFE0">Ayuda</span></div>
-        <nav>
-            <a href="/" style="color: white; margin-right: 20px;">Inicio</a>
-            <a href="/login" style="color: white; margin-right: 20px;">Ingresar</a>
-            <a href="/register" style="background: #3EBFE0; padding: 10px 20px; border-radius: 8px; color: white; font-weight: bold;">Comenzar</a>
-        </nav>
+<body class="landing">
+
+    <!-- ===================== NAVBAR ===================== -->
+    <header class="landing-nav">
+        <div class="container">
+            <a href="/" class="logo"><span>Guate</span><span class="logo-ayuda">Ayuda</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <nav>
+                <ul class="nav-links" id="navLinks">
+                    <li><a href="#inicio">Inicio</a></li>
+                    <li><a href="#quienes-somos">¿Quiénes somos?</a></li>
+                    <li><a href="#como-funciona">Cómo funciona</a></li>
+                    <li><a href="#funcionalidades">Funcionalidades</a></li>
+                    <li><a href="#planes">Planes</a></li>
+                    <li><a href="/login" class="nav-login">Iniciar sesión</a></li>
+                    <li><a href="/register" class="nav-cta">Comenzar</a></li>
+                </ul>
+            </nav>
+        </div>
     </header>
 
     <main>
-        <!-- Hero, Misión, Visión, Mapa, Social, Footer -->
-        <section class="hero" style="min-height: 80vh; padding: 60px 8%; background: #E9F8FB;">
-            <h1>Conectamos oportunidades,<br><span>impulsamos crecimiento.</span></h1>
-            <p>Tecnología para crecer desde donde estás.</p>
-            <a href="/register" style="background: #105465; padding: 15px 30px; border-radius: 10px; color: white; font-weight: bold; margin-top: 20px; display: inline-block;">Comenzar Ahora</a>
+
+        <!-- ===================== HERO ===================== -->
+        <section class="hero-landing" id="inicio">
+            <div class="container">
+                <div>
+                    <span class="hero-label"><span class="flag-symbol">🇬🇹</span> Tecnología pensada para la microempresa guatemalteca</span>
+                    <h1>Convierte los datos de tu negocio<br>en <span class="accent">oportunidades de crecimiento</span></h1>
+                    <p class="hero-description">
+                        GuateAyuda combina gestión empresarial, análisis de datos y asistencia inteligente
+                        para que controles tu negocio, entiendas tu información y tomes mejores decisiones.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="/register" class="button-primary">Comenzar gratis <i class="fa-solid fa-arrow-right"></i></a>
+                        <a href="#como-funciona" class="button-secondary">Conocer GuateAyuda</a>
+                    </div>
+                </div>
+
+                <div class="hero-visual-wrap">
+                    <div class="hero-visual-card">
+                        <div class="mini-header">
+                            <span class="mini-title">Tu negocio en un vistazo</span>
+                            <span class="mini-badge">Dashboard</span>
+                        </div>
+                        <div class="mini-bar wide"></div>
+                        <div class="mini-bar"></div>
+                        <div class="mini-bar small"></div>
+                        <div class="mini-bar"></div>
+                        <div class="hero-stat">
+                            <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+                            <div class="stat-text">
+                                <strong>+40% en ventas</strong>
+                                <span>con mejor control e información</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero-float">
+                        <i class="fa-solid fa-robot"></i>
+                        <div><strong>Asistente IA</strong><br>listo para ayudarte</div>
+                    </div>
+                </div>
+            </div>
         </section>
-        <!-- Resto de secciones públicas aquí -->
+
+        <!-- ===================== ¿QUIÉNES SOMOS? ===================== -->
+        <section class="who-section" id="quienes-somos">
+            <div class="container">
+                <div class="section-head">
+                    <span class="section-tag">¿Quiénes somos?</span>
+                    <h2>GuateAyuda apoya a MIPYMES y pequeños empresarios</h2>
+                    <p>Una plataforma orientada a microempresarios, pequeños productores y emprendedores que quieren profesionalizar su negocio con tecnología accesible.</p>
+                </div>
+                <div class="who-grid">
+                    <div class="hero-visual-card">
+                        <div class="mini-header">
+                            <span class="mini-title">Control · Entender · Crecer</span>
+                            <i class="fa-solid fa-bullseye" style="color: var(--blue-main); font-size: 22px;"></i>
+                        </div>
+                        <div class="mini-bar wide"></div>
+                        <div class="mini-bar"></div>
+                        <div class="mini-bar small"></div>
+                        <div class="mini-bar"></div>
+                        <div class="hero-stat">
+                            <div class="stat-icon"><i class="fa-solid fa-rocket"></i></div>
+                            <div class="stat-text">
+                                <strong>Información clara</strong>
+                                <span>para decisiones con confianza</span>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="who-check-list">
+                        <li>
+                            <span class="check"><i class="fa-solid fa-check"></i></span>
+                            <div><strong>Herramientas digitales accesibles</strong><span>Pensadas para la realidad de la microempresa.</span></div>
+                        </li>
+                        <li>
+                            <span class="check"><i class="fa-solid fa-check"></i></span>
+                            <div><strong>Información centralizada</strong><span>Tus ventas, gastos, producción e inventario en un solo lugar.</span></div>
+                        </li>
+                        <li>
+                            <span class="check"><i class="fa-solid fa-check"></i></span>
+                            <div><strong>Análisis para comprender</strong><span>De los datos a la comprensión real del negocio.</span></div>
+                        </li>
+                        <li>
+                            <span class="check"><i class="fa-solid fa-check"></i></span>
+                            <div><strong>Asistencia inteligente</strong><span>Un asistente que te orienta al registrar y consultar.</span></div>
+                        </li>
+                        <li>
+                            <span class="check"><i class="fa-solid fa-check"></i></span>
+                            <div><strong>Orientación para crecer</strong><span>Identifica oportunidades y mejora tu negocio.</span></div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== PROBLEMA ===================== -->
+        <section class="problem-section" id="problema">
+            <div class="container">
+                <div class="section-head">
+                    <span class="section-tag">El problema</span>
+                    <h2>Muchos negocios no saben qué está pasando en su empresa</h2>
+                    <p>La falta de información clara y herramientas adecuadas frena a los pequeños empresarios.</p>
+                </div>
+                <div class="grid-4">
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-eye-slash"></i></div>
+                        <h3>Falta de información</h3>
+                        <p>Sin una visión clara de ventas, gastos, producción o inventario.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-wrench"></i></div>
+                        <h3>Falta de herramientas</h3>
+                        <p>Las soluciones tradicionales suelen ser complejas o costosas.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-question"></i></div>
+                        <h3>Dificultad para decidir</h3>
+                        <p>Tener datos no siempre significa saber interpretarlos.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        <h3>Dificultad para crecer</h3>
+                        <p>Hay potencial, pero faltan herramientas para detectarlo.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== SOLUCIÓN ===================== -->
+        <section class="solution-section" id="como-funciona">
+            <div class="container">
+                <div class="section-head">
+                    <span class="section-tag">Nuestra solución</span>
+                    <h2>GuateAyuda te acompaña paso a paso</h2>
+                    <p>De registrar tu información a encontrar oportunidades para hacer crecer tu negocio.</p>
+                </div>
+                <div class="solution-flow">
+                    <div class="solution-step">
+                        <div class="step-num">PASO 1</div>
+                        <i class="fa-solid fa-clipboard-check"></i>
+                        <h3>Controlar</h3>
+                        <p>Registra ventas, gastos, producción e inventario.</p>
+                    </div>
+                    <div class="solution-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                    <div class="solution-step">
+                        <div class="step-num">PASO 2</div>
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <h3>Entender</h3>
+                        <p>Analiza tus datos y comprende tu negocio.</p>
+                    </div>
+                    <div class="solution-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                    <div class="solution-step">
+                        <div class="step-num">PASO 3</div>
+                        <i class="fa-solid fa-display"></i>
+                        <h3>Mostrar</h3>
+                        <p>Visualiza indicadores y gráficas claras.</p>
+                    </div>
+                    <div class="solution-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                    <div class="solution-step">
+                        <div class="step-num">PASO 4</div>
+                        <i class="fa-solid fa-comments"></i>
+                        <h3>Conectar</h3>
+                        <p>Consulta a tu asistente inteligente.</p>
+                    </div>
+                    <div class="solution-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                    <div class="solution-step">
+                        <div class="step-num">PASO 5</div>
+                        <i class="fa-solid fa-rocket"></i>
+                        <h3>Crecer</h3>
+                        <p>Encuentra oportunidades y avanza.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== FUNCIONALIDADES ===================== -->
+        <section class="features-section" id="funcionalidades">
+            <div class="container">
+                <div class="section-head">
+                    <span class="section-tag">Funcionalidades</span>
+                    <h2>Todo lo que tu negocio necesita en una plataforma</h2>
+                    <p>Herramientas reales y disponibles para el control y análisis de tu empresa.</p>
+                </div>
+                <div class="grid-3">
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-gauge-high"></i></div>
+                        <h3>Dashboard empresarial</h3>
+                        <p>Visualización clara de ventas, gastos, producción e inventario.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-chart-line"></i></div>
+                        <h3>Análisis</h3>
+                        <p>Transforma los datos de tu negocio en información comprensible.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-robot"></i></div>
+                        <h3>Asistente inteligente</h3>
+                        <p>Chat de GuateAyuda para consultar y registrar información en lenguaje natural.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <h3>Gestión empresarial</h3>
+                        <p>Organiza productos, inventario y operaciones de tu negocio.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-file-lines"></i></div>
+                        <h3>Reportes</h3>
+                        <p>Genera reportes empresariales para tu control y toma de decisiones.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="card-icon"><i class="fa-solid fa-seedling"></i></div>
+                        <h3>Crecimiento</h3>
+                        <p>Identifica oportunidades y recomendaciones para mejorar tu negocio.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== PLANES ===================== -->
+        <section class="plans-section" id="planes">
+            <div class="container">
+                <div class="section-head">
+                    <span class="section-tag">Planes</span>
+                    <h2>Elige el plan ideal para tu negocio</h2>
+                    <p>Empieza gratis y escala cuando tu empresa lo necesite.</p>
+                </div>
+                <div class="plans-grid">
+
+                    <!-- GRATUITA -->
+                    <div class="plan-card">
+                        <div class="plan-name">Gratuita</div>
+                        <ul class="plan-features">
+                            <li><i class="fa-solid fa-check"></i> Perfil empresarial</li>
+                            <li><i class="fa-solid fa-check"></i> Gestión básica del negocio</li>
+                            <li><i class="fa-solid fa-check"></i> Dashboard básico</li>
+                            <li><i class="fa-solid fa-check"></i> Registro de productos</li>
+                            <li><i class="fa-solid fa-check"></i> Información básica de ventas</li>
+                            <li><i class="fa-solid fa-check"></i> Acceso limitado al asistente</li>
+                            <li><i class="fa-solid fa-check"></i> Reportes básicos</li>
+                        </ul>
+                        <p class="plan-price-note">Precio por definir</p>
+                        <a href="/register" class="button-primary" style="justify-content: center;">Comenzar gratis</a>
+                    </div>
+
+                    <!-- ESTÁNDAR -->
+                    <div class="plan-card featured">
+                        <div class="plan-badge">MÁS POPULAR</div>
+                        <div class="plan-name">Estándar</div>
+                        <ul class="plan-features">
+                            <li><i class="fa-solid fa-check"></i> Todo lo incluido en Gratuita</li>
+                            <li><i class="fa-solid fa-check"></i> Dashboard avanzado</li>
+                            <li><i class="fa-solid fa-check"></i> Gráficas y estadísticas</li>
+                            <li><i class="fa-solid fa-check"></i> Análisis empresarial</li>
+                            <li><i class="fa-solid fa-check"></i> Mayor capacidad de datos</li>
+                            <li><i class="fa-solid fa-check"></i> Asistente inteligente ampliado</li>
+                            <li><i class="fa-solid fa-check"></i> Reportes avanzados</li>
+                            <li><i class="fa-solid fa-check"></i> Recomendaciones empresariales</li>
+                        </ul>
+                        <p class="plan-price-note">Precio por definir</p>
+                        <a href="/register" class="button-primary" style="justify-content: center;">Elegir Estándar</a>
+                    </div>
+
+                    <!-- ENTERPRISE -->
+                    <div class="plan-card">
+                        <div class="plan-name">Enterprise</div>
+                        <ul class="plan-features">
+                            <li><i class="fa-solid fa-check"></i> Todo lo incluido en Estándar</li>
+                            <li><i class="fa-solid fa-check"></i> Análisis avanzado</li>
+                            <li><i class="fa-solid fa-check"></i> Mayor capacidad</li>
+                            <li><i class="fa-solid fa-check"></i> Funciones empresariales avanzadas</li>
+                            <li><i class="fa-solid fa-check"></i> Personalización</li>
+                            <li><i class="fa-solid fa-check"></i> Soporte prioritario</li>
+                            <li><i class="fa-solid fa-check"></i> Herramientas avanzadas de IA</li>
+                            <li><i class="fa-solid fa-check"></i> Reportes avanzados y crecimiento</li>
+                        </ul>
+                        <p class="plan-price-note">Precio por definir</p>
+                        <a href="/register" class="button-secondary" style="justify-content: center;">Elegir Enterprise</a>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== COMPARACIÓN ===================== -->
+        <section class="compare-section" id="comparacion">
+            <div class="container">
+                <div class="section-head">
+                    <span class="section-tag">Comparación</span>
+                    <h2>Compara los planes</h2>
+                    <p>Encuentra la diferencia entre cada modalidad de un vistazo.</p>
+                </div>
+                <div class="compare-table-wrap">
+                    <table class="compare-table">
+                        <thead>
+                            <tr>
+                                <th>Funcionalidad</th>
+                                <th>Gratuita</th>
+                                <th class="highlight-col">Estándar</th>
+                                <th>Enterprise</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Perfil empresarial</td><td><i class="fa-solid fa-check check"></i></td><td><i class="fa-solid fa-check check"></i></td><td><i class="fa-solid fa-check check"></i></td></tr>
+                            <tr><td>Dashboard</td><td>Básico</td><td>Avanzado</td><td>Avanzado</td></tr>
+                            <tr><td>Gráficas</td><td>Básicas</td><td><i class="fa-solid fa-check check"></i></td><td><i class="fa-solid fa-check check"></i></td></tr>
+                            <tr><td>Análisis</td><td>Básico</td><td><i class="fa-solid fa-check check"></i></td><td>Avanzado</td></tr>
+                            <tr><td>Chat IA</td><td>Limitado</td><td><i class="fa-solid fa-check check"></i></td><td><i class="fa-solid fa-check check"></i></td></tr>
+                            <tr><td>Reportes</td><td>Básicos</td><td>Avanzados</td><td>Avanzados</td></tr>
+                            <tr><td>Recomendaciones</td><td>Básicas</td><td><i class="fa-solid fa-check check"></i></td><td>Avanzadas</td></tr>
+                            <tr><td>Personalización</td><td><span class="dash">—</span></td><td><span class="dash">—</span></td><td><i class="fa-solid fa-check check"></i></td></tr>
+                            <tr><td>Soporte</td><td>Básico</td><td>Prioritario</td><td>Prioritario</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== CTA FINAL ===================== -->
+        <section class="cta-section" id="cta">
+            <div class="container">
+                <h2>Tu negocio ya tiene los datos.<br>Ahora conviértelos en oportunidades.</h2>
+                <p>Registra, comprende y crece con GuateAyuda. Comienza hoy mismo, gratis.</p>
+                <div class="hero-buttons" style="justify-content: center;">
+                    <a href="/register" class="button-primary">Comenzar gratis <i class="fa-solid fa-arrow-right"></i></a>
+                    <a href="#planes" class="button-secondary" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.25); color: white;">Conocer nuestros planes</a>
+                </div>
+            </div>
+        </section>
+
     </main>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="landing-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-logo"><span>Guate</span><span>Ayuda</span></div>
+                    <p>Plataforma digital para MIPYMES y pequeños empresarios que impulsa el control, análisis y crecimiento del negocio.</p>
+                </div>
+                <div>
+                    <h4>Navegación</h4>
+                    <ul>
+                        <li><a href="#inicio">Inicio</a></li>
+                        <li><a href="#quienes-somos">¿Quiénes somos?</a></li>
+                        <li><a href="#como-funciona">Cómo funciona</a></li>
+                        <li><a href="#funcionalidades">Funcionalidades</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Planes</h4>
+                    <ul>
+                        <li><a href="#planes">Gratuita</a></li>
+                        <li><a href="#planes">Estándar</a></li>
+                        <li><a href="#planes">Enterprise</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Cuenta</h4>
+                    <ul>
+                        <li><a href="/login">Iniciar sesión</a></li>
+                        <li><a href="/register">Crear cuenta</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                &copy; 2026 GuateAyuda. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        (function () {
+            var toggle = document.getElementById("navToggle");
+            var links = document.getElementById("navLinks");
+
+            if (toggle && links) {
+                toggle.addEventListener("click", function () {
+                    var open = links.classList.toggle("open");
+                    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+                });
+
+                links.querySelectorAll("a").forEach(function (a) {
+                    a.addEventListener("click", function () {
+                        links.classList.remove("open");
+                        toggle.setAttribute("aria-expanded", "false");
+                    });
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

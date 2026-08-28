@@ -10,6 +10,7 @@ import os
 import re
 import sqlite3
 from pathlib import Path
+from urllib.parse import urlparse
 
 import psycopg2
 import psycopg2.extras
@@ -21,8 +22,44 @@ SQLITE_DB_PATH = BASE_DIR / "guateayuda.db"
 _USE_SQLITE = False
 
 
+def _parse_database_url():
+    """Parsea DATABASE_URL (Formato de host) y devuelve un dict de conexión.
+
+    Útil para plataformas como Render/Railway/Heroku que exponen SOLO
+    DATABASE_URL en lugar de variables individuales.
+    """
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        return None
+    p = urlparse(url)
+    return {
+        "host": p.hostname or "localhost",
+        "port": p.port or 5432,
+        "dbname": (p.path or "/").lstrip("/") or "guateayuda",
+        "user": p.username or "",
+        "password": p.password or "",
+    }
+
+
 def config():
-    """Devuelve el diccionario de configuración de conexión a PostgreSQL."""
+    """Devuelve el diccionario de configuración de conexión a PostgreSQL.
+
+    Prioridad:
+      1. Variables individuales GUATEAYUDA_* (configuración explícita).
+      2. DATABASE_URL (uso en hosts como Render/Railway).
+    """
+    if os.getenv("DATABASE_URL"):
+        c = _parse_database_url()
+        if c:
+            return {
+                "host": c["host"],
+                "port": c["port"],
+                "dbname": c["dbname"],
+                "user": c["user"],
+                "password": c["password"],
+                "connect_timeout": 2,
+                "options": "-c search_path=guateayuda,public",
+            }
     return {
         "host": os.getenv("GUATEAYUDA_HOST", "localhost"),
         "port": os.getenv("GUATEAYUDA_PORT", "5432"),

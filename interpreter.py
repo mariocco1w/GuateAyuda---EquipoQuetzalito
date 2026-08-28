@@ -12,6 +12,9 @@ Operaciones soportadas en el MVP (sección 8):
     * venta       -> "Vendí 8 almuerzos a Q25."
     * gasto       -> "Gasté Q150 comprando verduras."
     * inventario  -> "Me quedan 10 gaseosas."
+    * produccion  -> "Se fabricaron 24 unidades de vasos."
+Un mismo mensaje puede contener varias operaciones separadas por "y", ",",
+"además" o "también" (ver `interpretar_multiples`).
 """
 
 import re
@@ -32,7 +35,10 @@ START_PRON = (
 TIPO_PATTERNS = [
     # Orden importante: gasto antes que venta, porque "compré" puede indicar
     # compra de insumo (gasto) salvo que se registre como venta.
-    ("inventario", r"\b(me quedar?|quedan|tengo|hay|stock|existencia)\b"),
+    ("inventario", r"\b(me quedar?|quedan|tengo|hay|stock|existencia|"
+                    r"ingresaron|ingres[oó]|entraron|entr[oó]|recibimos|recib[íi])\b"),
+    ("produccion", r"\b(fabricamos|fabricaron|fabric[oó]|producimos|produjimos|"
+                   r"elaboramos|elaboraron|hicimos|hicieron|manufacturamos)\b"),
     ("gasto",      r"\b(gast[eé]|gastamos|pagu[eé]|pague|compr[eé]|compramos|compramos)\b"),
     ("venta",      r"\b(vend[ií]|vend[ií]o|vend[ií]mos|vend[ií]eron|vend[ií])\b"),
 ]
@@ -42,6 +48,9 @@ STOP_PRODUCTO = [
     "de", "del", "la", "las", "el", "los", "un", "una", "unos", "unas",
     "a", "cada", "quetzales", "quetzal", "q", "pesos", "gast[eé]", "gastamos",
     "compr[eé]", "compramos", "vend[ií]", "por", "hoy", "dia", "día",
+    "fabricamos", "fabricaron", "fabric[oó]", "producimos", "produjimos",
+    "elaboramos", "hicimos", "hicieron", "manufacturamos", "unidades",
+    "se", "ingresaron", "ingres[oó]", "entraron", "recibimos",
 ]
 
 # ---------------------------------------------------------------------------
@@ -169,6 +178,61 @@ def _detectar_venta(original):
     }
 
 
+def _detectar_produccion(original):
+    """Parsea producción: 'Se fabricaron 24 unidades de vasos'."""
+    numeros = _extraer_numeros(original)
+    cantidad = numeros[0] if numeros else None
+
+    texto = re.sub(
+        r"\b(fabricamos|fabricaron|fabric[oó]|producimos|produjimos|"
+        r"elaboramos|elaboraron|hicimos|hicieron|manufacturamos|"
+        r"unidades|se|de)\b",
+        " ",
+        original,
+        flags=re.IGNORECASE,
+    )
+    producto = _limpiar_producto(texto, "produccion")
+
+    return {
+        "tipo": "produccion",
+        "producto": producto,
+        "cantidad": cantidad,
+    }
+
+
+def _detectar_ingreso_inventario(original):
+    """Parsea ingreso de mercancía: 'Ingresaron 15 espejos'."""
+    numeros = _extraer_numeros(original)
+    cantidad = numeros[0] if numeros else None
+
+    texto = re.sub(
+        r"\b(ingresaron|ingres[oó]|entraron|entr[oó]|recibimos|recib[íi]|de)\b",
+        " ",
+        original,
+        flags=re.IGNORECASE,
+    )
+    producto = _limpiar_producto(texto, "inventario")
+
+    return {
+        "tipo": "inventario",
+        "producto": producto,
+        "existencia": cantidad,
+        "concepto": producto,
+        "movimiento": "ENTRADA",
+    }
+
+
+# Separa el mensaje en cláusulas individuales cuando contiene varias
+# operaciones unidas por conectores.
+CLAUSULAS_RE = re.compile(r"\s+(?:y\s+|\+\s*|,\s*|y\s+tambi[eé]n\s+|"
+                          r"adem[aá]s\s+|tambi[eé]n\s+)\s*")
+
+def _dividir_clausulas(mensaje):
+    """Divide un mensaje en cláusulas aprovechando los conectores."""
+    partes = CLAUSULAS_RE.split(mensaje)
+    return [p.strip() for p in partes if p.strip()]
+
+
 def interpretar(mensaje):
     """Convierte un mensaje de lenguaje natural en estructura.
 
@@ -192,7 +256,15 @@ def interpretar(mensaje):
     tipo = _detectar_tipo(mensaje)
 
     if tipo == "inventario":
-        operacion = _detectar_inventario(mensaje)
+        # Distinguir ingreso de mercancía (mueve la existencia hacia arriba)
+        # frente a declaración de existencia actual.
+        if re.search(r"\b(ingresaron|ingres[oó]|entraron|entr[oó]|recibimos|recib[íi])\b",
+                     _normalizar(mensaje)):
+            operacion = _detectar_ingreso_inventario(mensaje)
+        else:
+            operacion = _detectar_inventario(mensaje)
+    elif tipo == "produccion":
+        operacion = _detectar_produccion(mensaje)
     elif tipo == "gasto":
         operacion = _detectar_gasto(mensaje)
     elif tipo == "venta":
@@ -238,4 +310,31 @@ def _validar(operacion):
     elif tipo == "inventario":
         if operacion.get("existencia") is None:
             errores.append("Falta la existencia registrada.")
+    elif tipo == "produccion":
+        if not operacion.get("cantidad"):
+            errores.append("Falta la cantidad producida.")
+        if not operacion.get("producto"):
+            errores.append("Falta el producto fabricado.")
     return errores
+
+
+def interpretar_multiples(mensaje):
+    """Interpreta un mensaje que puede contener varias operaciones.
+
+    Divide el texto en cláusulas y devuelve una lista de resultados, uno por
+    cada operación detectada. Si no se identifica ninguna, devuelve una lista
+    con un único resultado `interpretado=False`.
+    """
+    clausulas = _dividir_clausulas(mensaje or "")
+    if not clausulas:
+        return [{
+            "interpretado": False,
+            "operacion": None,
+            "mensaje": "No se recibió ningún mensaje.",
+            "token_sesion": str(uuid.uuid4()),
+        }]
+
+    resultados = []
+    for clausula in clausulas:
+        resultados.append(interpretar(clausula))
+    return resultados

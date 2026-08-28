@@ -7,7 +7,7 @@ correctamente a estructura para los tres tipos de operación del MVP
 
 import pytest
 
-from interpreter import interpretar
+from interpreter import interpretar, interpretar_multiples
 
 
 def test_venta_almuerzos():
@@ -74,3 +74,38 @@ def test_no_calcula_ni_modifica_datos():
     r = interpretar("Vendí 10 panes con pollo a 15 quetzales cada uno")
     op = r["operacion"]
     assert "total" not in op
+
+
+def test_produccion_vasos():
+    r = interpretar("Se fabricaron 24 unidades de vasos")
+    assert r["interpretado"] is True
+    assert r["tipo"] == "produccion"
+    assert r["operacion"]["cantidad"] == 24
+    assert r["operacion"]["producto"] == "vasos"
+
+
+def test_ingreso_inventario_espejos():
+    r = interpretar("Hoy ingresaron 15 espejos")
+    assert r["interpretado"] is True
+    assert r["tipo"] == "inventario"
+    assert r["operacion"]["movimiento"] == "ENTRADA"
+    assert r["operacion"]["existencia"] == 15
+    assert r["operacion"]["producto"] == "espejos"
+
+
+def test_multiples_operaciones():
+    rs = interpretar_multiples("el dia de hoy ingresaron 15 espejos y se fabricaron 24 unidades de vasos")
+    interpretados = [r for r in rs if r.get("interpretado")]
+    assert len(interpretados) == 2
+    assert interpretados[0]["tipo"] == "inventario"
+    assert interpretados[0]["operacion"]["movimiento"] == "ENTRADA"
+    assert interpretados[1]["tipo"] == "produccion"
+    assert interpretados[1]["operacion"]["producto"] == "vasos"
+
+
+def test_multiples_simple_unica():
+    # Un solo tipo de operación sigue funcionando y devuelve lista de 1.
+    rs = interpretar_multiples("Vendí 8 almuerzos a Q25")
+    assert len(rs) == 1
+    assert rs[0]["interpretado"] is True
+    assert rs[0]["tipo"] == "venta"

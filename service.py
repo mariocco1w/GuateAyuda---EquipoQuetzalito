@@ -167,11 +167,74 @@ def guardar_inventario(negocio_id, operacion):
     if producto_id is None:
         raise ValueError(f"No se pudo asociar el producto '{nombre}'.")
 
+    # Si es un ingreso (ENTRADA), se suma a la existencia actual en lugar de
+    # reemplazarla; si no, se establece la existencia declarada.
+    if operacion.get("movimiento") == "ENTRADA":
+        fila = db.query_one(
+            "SELECT COALESCE(existencia, 0) AS existencia FROM producto WHERE id = %s",
+            (producto_id,),
+        )
+        base = float(fila["existencia"])
+        nueva = base + existencia
+        db.execute(
+            "UPDATE producto SET existencia = %s WHERE id = %s",
+            (nueva, producto_id),
+        )
+        _registrar_movimiento(negocio_id, producto_id, "ENTRADA", existencia,
+                              f"Ingreso de {existencia} {nombre}")
+        return {"tipo": "inventario", "producto": nombre, "existencia": nueva,
+                "movimiento": "ENTRADA"}
+
     db.execute(
         "UPDATE producto SET existencia = %s WHERE id = %s",
         (existencia, producto_id),
     )
+    _registrar_movimiento(negocio_id, producto_id, "AJUSTE", existencia,
+                          f"Existencia declarada de {existencia} {nombre}")
     return {"tipo": "inventario", "producto": nombre, "existencia": existencia}
+
+
+def guardar_produccion(negocio_id, operacion):
+    """Registra producción: incrementa la existencia del producto fabricado."""
+    nombre = (operacion.get("producto") or "").strip()
+    cantidad = int(operacion.get("cantidad") or 0)
+
+    if not nombre or cantidad <= 0:
+        raise ValueError("Datos de producción incompletos o inválidos.")
+
+    producto_id = _buscar_o_crear_producto(negocio_id, nombre, 0)
+    if producto_id is None:
+        raise ValueError(f"No se pudo asociar el producto '{nombre}'.")
+
+    fila = db.query_one(
+        "SELECT COALESCE(existencia, 0) AS existencia FROM producto WHERE id = %s",
+        (producto_id,),
+    )
+    base = float(fila["existencia"])
+    nueva = base + cantidad
+    db.execute(
+        "UPDATE producto SET existencia = %s WHERE id = %s",
+        (nueva, producto_id),
+    )
+    _registrar_movimiento(negocio_id, producto_id, "PRODUCCION", cantidad,
+                          f"Producción de {cantidad} {nombre}")
+    return {"tipo": "produccion", "producto": nombre, "cantidad": cantidad,
+            "existencia": nueva}
+
+
+def _registrar_movimiento(negocio_id, producto_id, tipo, cantidad, descripcion):
+    """Registra un movimiento de inventario (ENTRADA/PRODUCCION/AJUSTE)."""
+    try:
+        mid = _siguiente_id("movimiento_inventario")
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        db.execute(
+            "INSERT INTO movimiento_inventario "
+            "(id, negocio_id, producto_id, tipo, cantidad_delta, descripcion, creado_en) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (mid, negocio_id, producto_id, tipo, cantidad, descripcion, ahora),
+        )
+    except Exception as exc:
+        print(f"[warn] No se pudo registrar el movimiento de inventario: {exc}")
 
 
 def _descontar_inventario(negocio_id, nombre, cantidad):
@@ -203,6 +266,8 @@ def guardar_operacion_confirmada(negocio_id, token_sesion, mensaje_humano=None):
         resultado = guardar_gasto(negocio_id, estructura)
     elif tipo == "inventario":
         resultado = guardar_inventario(negocio_id, estructura)
+    elif tipo == "produccion":
+        resultado = guardar_produccion(negocio_id, estructura)
     else:
         raise ValueError("Tipo de operación no soportado.")
 

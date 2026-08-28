@@ -1,0 +1,31 @@
+# Render Blueprint — GuateAyuda
+# Define el servicio web Flask + la base de datos PostgreSQL.
+# Al desplegar este archivo ("Blueprint") desde GitHub, Render crea ambos recursos
+# y las variables de ambiente de la BD se inyectan automáticamente al servicio.
+
+services:
+  - type: web
+    name: guateayuda
+    runtime: python
+    plan: free
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash render_start.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: guateayuda-db
+          property: connectionString
+      # El resto de variables usadas por db.py se derivan de DATABASE_URL en el
+      # build de arranque; se configuran en el hook de Render (ver el mini setup
+      # en app.py que parsea DATABASE_URL si GUATEAYUDA_* no están definidas).
+
+databases:
+  - name: guateayuda-db
+    plan: free
+    databaseName: guateayuda
+    user: guateayuda

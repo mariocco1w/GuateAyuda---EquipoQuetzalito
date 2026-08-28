@@ -2,21 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Registro | GuateAyuda</title>
+    <title>Registro Empresarial | GuateAyuda</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #F7FBFC; padding: 20px;">
     <form method="POST" style="background: white; padding: 40px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 12px rgba(0,0,0,0.05); width: 100%; max-width: 500px;">
-        <h2 style="color: #105465; margin-bottom: 20px; text-align: center;">Registrar Empresa</h2>
-        <input type="text" placeholder="Nombre de la empresa" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;">
-        <input type="text" placeholder="Responsable" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;">
-        <select style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;">
-            <option>Tipo de negocio</option>
-            <option>Comedor</option>
-            <option>Tienda</option>
-            <option>Textiles</option>
-        </select>
-        <button type="submit" style="width: 100%; background: #3EBFE0; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;">Continuar</button>
+        <h2 style="color: #105465; margin-bottom: 20px; text-align: center;">Datos de tu Empresa</h2>
+        
+        <input type="text" name="nombre" placeholder="Nombre de la empresa" required style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;">
+        <input type="text" name="propietario" placeholder="Nombre del propietario" required style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;">
+        <input type="text" name="actividad_principal" placeholder="Actividad principal (ej: Comedor)" required style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;">
+        <textarea name="descripcion" placeholder="Breve descripción del negocio" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;"></textarea>
+        <input type="text" name="departamento" placeholder="Departamento" required style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;">
+        <input type="text" name="municipio" placeholder="Municipio" required style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #DCEBED; border-radius: 8px; box-sizing: border-box;">
+        
+        <button type="submit" style="width: 100%; background: #3EBFE0; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;">Finalizar Registro</button>
     </form>
 </body>
 </html>

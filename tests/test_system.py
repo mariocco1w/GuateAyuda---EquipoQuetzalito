@@ -53,7 +53,7 @@ def test_public_site_rendering(client):
     assert r.status_code == 200
     html = r.get_data(as_text=True)
     assert "GuateAyuda" in html
-    assert "Ingresar" in html
+    assert "Iniciar sesión" in html
     assert "Comenzar" in html
 
 

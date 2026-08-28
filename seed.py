@@ -147,7 +147,19 @@ def seed_comedor_maria():
     return nid
 
 
+def hay_datos():
+    """Devuelve True si ya existen negocios en la base (evita borrar producción)."""
+    fila = db.query_one("SELECT COUNT(*) AS n FROM negocio")
+    return int(fila["n"]) > 0
+
+
 def main():
+    # En producción nunca borrar la base ni duplicar datos demo si ya existen.
+    if hay_datos():
+        print("La base ya contiene datos. Omitiendo seed para no borrar producción.")
+        print("Para re-poblar desde cero: ejecuta  python seed.py --force")
+        return
+
     print("Poblando base de datos con datos DEMO (no reales)...")
     db.init_db(clear=True)
 
@@ -161,4 +173,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    # Soporte para forzar el re-poblamiento cuando se desee explícitamente.
+    if "--force" in sys.argv:
+        db.init_db(clear=True)
+        print("Creando 7 negocios complementarios:")
+        seed_negocios_basicos()
+        print("Creando caso principal (Comedor Doña María):")
+        seed_comedor_maria()
+        print("\nSeed completado (forzado). La base contiene datos ficticios identificados como DEMO.")
+    else:
+        main()
