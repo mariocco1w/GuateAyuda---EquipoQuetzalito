@@ -1,0 +1,687 @@
+BEGIN;
+
+-- ============================================================
+-- ESQUEMA
+-- ============================================================
+
+CREATE SCHEMA IF NOT EXISTS guateayuda;
+
+
+-- ============================================================
+-- NEGOCIOS
+-- ============================================================
+
+CREATE TABLE guateayuda.negocio (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    nombre VARCHAR(150) NOT NULL,
+    propietario VARCHAR(150),
+
+    actividad_principal VARCHAR(120),
+    descripcion TEXT,
+
+    departamento VARCHAR(100),
+    municipio VARCHAR(100),
+
+    -- Información variable según el tipo de microempresa
+    atributos JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT ck_negocio_nombre
+        CHECK (BTRIM(nombre) <> '')
+);
+
+
+-- ============================================================
+-- SESIONES CONVERSACIONALES
+-- ============================================================
+
+CREATE TABLE guateayuda.sesion_conversacional (
+    id UUID PRIMARY KEY,
+
+    negocio_id BIGINT NOT NULL,
+
+    -- Guardar SHA-256 del token.
+    -- Nunca almacenar el token original.
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expira_en TIMESTAMPTZ NOT NULL,
+
+    ultima_actividad TIMESTAMPTZ,
+    revocado_en TIMESTAMPTZ,
+
+    -- Necesario para garantizar que una interacción
+    -- pertenezca a la sesión del mismo negocio.
+    CONSTRAINT uq_sesion_id_negocio
+        UNIQUE (id, negocio_id),
+
+    CONSTRAINT fk_sesion_negocio
+        FOREIGN KEY (negocio_id)
+        REFERENCES guateayuda.negocio(id),
+
+    CONSTRAINT ck_sesion_token_hash
+        CHECK (token_hash ~ '^[0-9a-fA-F]{64}$'),
+
+    CONSTRAINT ck_sesion_expiracion
+        CHECK (expira_en > creado_en)
+);
+
+
+-- ============================================================
+-- INTERACCIONES CON IA
+-- ============================================================
+
+CREATE TABLE guateayuda.interaccion (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    negocio_id BIGINT NOT NULL,
+
+    sesion_id UUID,
+
+    -- Mensaje original recibido del usuario
+    mensaje_original TEXT NOT NULL,
+
+    -- VENTA / GASTO / INVENTARIO / DESCONOCIDO
+    intent VARCHAR(30),
+
+    -- Información del modelo utilizado
+    modelo VARCHAR(100),
+    version_modelo VARCHAR(50),
+    version_prompt VARCHAR(50),
+
+    confidence NUMERIC(5,4),
+
+    -- JSON producido originalmente por la IA
+    estructura JSONB,
+
+    -- JSON corregido por usuario/backend cuando corresponda
+    estructura_corregida JSONB,
+
+    estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+
+    confirmado BOOLEAN NOT NULL DEFAULT FALSE,
+
+    -- Información sobre el registro finalmente persistido
+    resultado_persistencia JSONB,
+
+    latencia_ms INTEGER,
+
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    confirmado_en TIMESTAMPTZ,
+
+    -- Permite referencias compuestas para preservar
+    -- aislamiento entre negocios.
+    CONSTRAINT uq_interaccion_id_negocio
+        UNIQUE (id, negocio_id),
+
+    CONSTRAINT fk_interaccion_negocio
+        FOREIGN KEY (negocio_id)
+        REFERENCES guateayuda.negocio(id),
+
+    CONSTRAINT fk_interaccion_sesion
+        FOREIGN KEY (sesion_id, negocio_id)
+        REFERENCES guateayuda.sesion_conversacional(id, negocio_id),
+
+    CONSTRAINT ck_interaccion_intent
+        CHECK (
+            intent IS NULL
+            OR intent IN (
+                'VENTA',
+                'GASTO',
+                'INVENTARIO',
+                'DESCONOCIDO'
+            )
+        ),
+
+    CONSTRAINT ck_interaccion_estado
+        CHECK (
+            estado IN (
+                'PENDIENTE',
+                'CONFIRMADA',
+                'RECHAZADA',
+                'ERROR'
+            )
+        ),
+
+    CONSTRAINT ck_interaccion_confidence
+        CHECK (
+            confidence IS NULL
+            OR confidence BETWEEN 0 AND 1
+        ),
+
+    CONSTRAINT ck_interaccion_latencia
+        CHECK (
+            latencia_ms IS NULL
+            OR latencia_ms >= 0
+        )
+);
+
+
+-- ============================================================
+-- PRODUCTOS, SERVICIOS E INSUMOS
+-- ============================================================
+
+CREATE TABLE guateayuda.producto (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    negocio_id BIGINT NOT NULL,
+
+    nombre VARCHAR(150) NOT NULL,
+
+    tipo_item VARCHAR(20) NOT NULL DEFAULT 'PRODUCTO',
+
+    unidad_medida VARCHAR(30),
+
+    precio_referencia NUMERIC(14,2),
+
+    costo_referencia NUMERIC(14,2),
+
+    maneja_inventario BOOLEAN NOT NULL DEFAULT TRUE,
+
+    existencia NUMERIC(14,3) NOT NULL DEFAULT 0,
+
+    inventario_minimo NUMERIC(14,3),
+
+    -- Información específica según el tipo de producto
+    atributos JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Permite FKs compuestas negocio + producto
+    CONSTRAINT uq_producto_id_negocio
+        UNIQUE (id, negocio_id),
+
+    CONSTRAINT fk_producto_negocio
+        FOREIGN KEY (negocio_id)
+        REFERENCES guateayuda.negocio(id),
+
+    CONSTRAINT ck_producto_nombre
+        CHECK (BTRIM(nombre) <> ''),
+
+    CONSTRAINT ck_producto_tipo
+        CHECK (
+            tipo_item IN (
+                'PRODUCTO',
+                'SERVICIO',
+                'INSUMO'
+            )
+        ),
+
+    CONSTRAINT ck_producto_precio
+        CHECK (
+            precio_referencia IS NULL
+            OR precio_referencia >= 0
+        ),
+
+    CONSTRAINT ck_producto_costo
+        CHECK (
+            costo_referencia IS NULL
+            OR costo_referencia >= 0
+        ),
+
+    CONSTRAINT ck_producto_existencia
+        CHECK (existencia >= 0),
+
+    CONSTRAINT ck_producto_inventario_minimo
+        CHECK (
+            inventario_minimo IS NULL
+            OR inventario_minimo >= 0
+        )
+);
+
+
+-- ============================================================
+-- TRANSACCIONES
+-- ============================================================
+
+CREATE TABLE guateayuda.transaccion (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    negocio_id BIGINT NOT NULL,
+
+    -- Interacción que originó la operación, cuando exista
+    interaccion_id BIGINT,
+
+    tipo VARCHAR(20) NOT NULL,
+
+    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    descripcion TEXT,
+
+    monto NUMERIC(14,2) NOT NULL,
+
+    moneda CHAR(3) NOT NULL DEFAULT 'GTQ',
+
+    origen VARCHAR(30) NOT NULL DEFAULT 'WEB',
+
+    estado VARCHAR(20) NOT NULL DEFAULT 'CONFIRMADA',
+
+    atributos JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Permite referencias compuestas preservando negocio
+    CONSTRAINT uq_transaccion_id_negocio
+        UNIQUE (id, negocio_id),
+
+    CONSTRAINT fk_transaccion_negocio
+        FOREIGN KEY (negocio_id)
+        REFERENCES guateayuda.negocio(id),
+
+    CONSTRAINT fk_transaccion_interaccion
+        FOREIGN KEY (interaccion_id, negocio_id)
+        REFERENCES guateayuda.interaccion(id, negocio_id),
+
+    CONSTRAINT ck_transaccion_tipo
+        CHECK (
+            tipo IN (
+                'VENTA',
+                'GASTO'
+            )
+        ),
+
+    CONSTRAINT ck_transaccion_monto
+        CHECK (monto > 0),
+
+    CONSTRAINT ck_transaccion_origen
+        CHECK (
+            origen IN (
+                'WEB',
+                'WHATSAPP',
+                'API',
+                'OTRO'
+            )
+        ),
+
+    CONSTRAINT ck_transaccion_estado
+        CHECK (
+            estado IN (
+                'PENDIENTE',
+                'CONFIRMADA',
+                'ANULADA'
+            )
+        )
+);
+
+
+-- ============================================================
+-- DETALLE DE VENTAS
+-- ============================================================
+
+CREATE TABLE guateayuda.detalle_venta (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    negocio_id BIGINT NOT NULL,
+
+    transaccion_id BIGINT NOT NULL,
+
+    producto_id BIGINT NOT NULL,
+
+    cantidad NUMERIC(14,3) NOT NULL,
+
+    precio_unitario NUMERIC(14,2) NOT NULL,
+
+    -- Calculado por Python
+    subtotal NUMERIC(14,2) NOT NULL,
+
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_detalle_transaccion
+        FOREIGN KEY (transaccion_id, negocio_id)
+        REFERENCES guateayuda.transaccion(id, negocio_id),
+
+    CONSTRAINT fk_detalle_producto
+        FOREIGN KEY (producto_id, negocio_id)
+        REFERENCES guateayuda.producto(id, negocio_id),
+
+    CONSTRAINT ck_detalle_cantidad
+        CHECK (cantidad > 0),
+
+    CONSTRAINT ck_detalle_precio
+        CHECK (precio_unitario >= 0),
+
+    CONSTRAINT ck_detalle_subtotal
+        CHECK (subtotal >= 0)
+);
+
+
+-- ============================================================
+-- MOVIMIENTOS DE INVENTARIO
+-- ============================================================
+
+CREATE TABLE guateayuda.movimiento_inventario (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    negocio_id BIGINT NOT NULL,
+
+    producto_id BIGINT NOT NULL,
+
+    transaccion_id BIGINT,
+
+    interaccion_id BIGINT,
+
+    tipo VARCHAR(30) NOT NULL,
+
+    -- Positivo para entradas.
+    -- Negativo para salidas.
+    -- AJUSTE puede utilizar cualquiera de los dos.
+    cantidad_delta NUMERIC(14,3) NOT NULL,
+
+    existencia_anterior NUMERIC(14,3),
+
+    existencia_posterior NUMERIC(14,3),
+
+    descripcion TEXT,
+
+    atributos JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_movimiento_producto
+        FOREIGN KEY (producto_id, negocio_id)
+        REFERENCES guateayuda.producto(id, negocio_id),
+
+    CONSTRAINT fk_movimiento_transaccion
+        FOREIGN KEY (transaccion_id, negocio_id)
+        REFERENCES guateayuda.transaccion(id, negocio_id),
+
+    CONSTRAINT fk_movimiento_interaccion
+        FOREIGN KEY (interaccion_id, negocio_id)
+        REFERENCES guateayuda.interaccion(id, negocio_id),
+
+    CONSTRAINT ck_movimiento_tipo
+        CHECK (
+            tipo IN (
+                'ENTRADA',
+                'SALIDA_VENTA',
+                'AJUSTE',
+                'MERMA',
+                'PRODUCCION'
+            )
+        ),
+
+    CONSTRAINT ck_movimiento_delta
+        CHECK (cantidad_delta <> 0),
+
+    CONSTRAINT ck_movimiento_existencia_anterior
+        CHECK (
+            existencia_anterior IS NULL
+            OR existencia_anterior >= 0
+        ),
+
+    CONSTRAINT ck_movimiento_existencia_posterior
+        CHECK (
+            existencia_posterior IS NULL
+            OR existencia_posterior >= 0
+        )
+);
+
+
+-- ============================================================
+-- HECHOS DEL NEGOCIO
+-- ============================================================
+
+CREATE TABLE guateayuda.hecho_negocio (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    negocio_id BIGINT NOT NULL,
+
+    categoria VARCHAR(80) NOT NULL,
+
+    clave VARCHAR(120) NOT NULL,
+
+    -- Información flexible asociada al hecho
+    valor JSONB NOT NULL,
+
+    fuente VARCHAR(30) NOT NULL,
+
+    confidence NUMERIC(5,4),
+
+    confirmado_usuario BOOLEAN NOT NULL DEFAULT FALSE,
+
+    vigente BOOLEAN NOT NULL DEFAULT TRUE,
+
+    vigente_desde TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    vigente_hasta TIMESTAMPTZ,
+
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_hecho_negocio
+        FOREIGN KEY (negocio_id)
+        REFERENCES guateayuda.negocio(id),
+
+    CONSTRAINT ck_hecho_categoria
+        CHECK (BTRIM(categoria) <> ''),
+
+    CONSTRAINT ck_hecho_clave
+        CHECK (BTRIM(clave) <> ''),
+
+    CONSTRAINT ck_hecho_fuente
+        CHECK (
+            fuente IN (
+                'USUARIO',
+                'TRANSACCION',
+                'SISTEMA',
+                'IA'
+            )
+        ),
+
+    CONSTRAINT ck_hecho_confidence
+        CHECK (
+            confidence IS NULL
+            OR confidence BETWEEN 0 AND 1
+        ),
+
+    CONSTRAINT ck_hecho_vigencia
+        CHECK (
+            vigente_hasta IS NULL
+            OR vigente_hasta >= vigente_desde
+        )
+);
+
+
+-- ============================================================
+-- INSIGHTS Y RECOMENDACIONES DE IA
+-- ============================================================
+
+CREATE TABLE guateayuda.insight_ia (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+    negocio_id BIGINT NOT NULL,
+
+    tipo VARCHAR(80) NOT NULL,
+
+    titulo VARCHAR(180) NOT NULL,
+
+    descripcion TEXT NOT NULL,
+
+    -- Datos que sustentan la inferencia o recomendación
+    evidencia JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    confidence NUMERIC(5,4),
+
+    modelo VARCHAR(100),
+
+    version_modelo VARCHAR(50),
+
+    version_prompt VARCHAR(50),
+
+    estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
+
+    generado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    expira_en TIMESTAMPTZ,
+
+    CONSTRAINT fk_insight_negocio
+        FOREIGN KEY (negocio_id)
+        REFERENCES guateayuda.negocio(id),
+
+    CONSTRAINT ck_insight_tipo
+        CHECK (BTRIM(tipo) <> ''),
+
+    CONSTRAINT ck_insight_titulo
+        CHECK (BTRIM(titulo) <> ''),
+
+    CONSTRAINT ck_insight_confidence
+        CHECK (
+            confidence IS NULL
+            OR confidence BETWEEN 0 AND 1
+        ),
+
+    CONSTRAINT ck_insight_estado
+        CHECK (
+            estado IN (
+                'ACTIVO',
+                'DESCARTADO',
+                'EXPIRADO'
+            )
+        ),
+
+    CONSTRAINT ck_insight_expiracion
+        CHECK (
+            expira_en IS NULL
+            OR expira_en >= generado_en
+        )
+);
+
+
+-- ============================================================
+-- ÍNDICES
+-- ============================================================
+
+-- JSONB variable del negocio
+CREATE INDEX idx_negocio_atributos_gin
+ON guateayuda.negocio
+USING GIN (atributos);
+
+
+-- Sesiones por negocio y expiración
+CREATE INDEX idx_sesion_negocio
+ON guateayuda.sesion_conversacional (
+    negocio_id,
+    expira_en
+);
+
+
+-- Interacciones recientes por negocio
+CREATE INDEX idx_interaccion_negocio_fecha
+ON guateayuda.interaccion (
+    negocio_id,
+    creado_en DESC
+);
+
+
+-- Evita productos duplicados por nombre dentro del mismo negocio.
+-- También cubre búsquedas cuyo prefijo sea negocio_id.
+CREATE UNIQUE INDEX uq_producto_negocio_nombre
+ON guateayuda.producto (
+    negocio_id,
+    LOWER(nombre)
+);
+
+
+-- Transacciones cronológicas por negocio
+CREATE INDEX idx_transaccion_negocio_fecha
+ON guateayuda.transaccion (
+    negocio_id,
+    fecha DESC
+);
+
+
+-- Transacciones por tipo
+CREATE INDEX idx_transaccion_negocio_tipo
+ON guateayuda.transaccion (
+    negocio_id,
+    tipo
+);
+
+
+-- Historial de inventario
+CREATE INDEX idx_movimiento_producto_fecha
+ON guateayuda.movimiento_inventario (
+    negocio_id,
+    producto_id,
+    creado_en DESC
+);
+
+
+-- Hechos por categoría y clave
+CREATE INDEX idx_hecho_negocio_busqueda
+ON guateayuda.hecho_negocio (
+    negocio_id,
+    categoria,
+    clave
+);
+
+
+-- Hechos vigentes
+CREATE INDEX idx_hecho_negocio_vigente
+ON guateayuda.hecho_negocio (
+    negocio_id,
+    vigente
+);
+
+
+-- Búsquedas sobre el contenido flexible de los hechos
+CREATE INDEX idx_hecho_valor_gin
+ON guateayuda.hecho_negocio
+USING GIN (valor);
+
+
+-- Insights recientes por negocio
+CREATE INDEX idx_insight_negocio_fecha
+ON guateayuda.insight_ia (
+    negocio_id,
+    generado_en DESC
+);
+
+
+-- Insights por estado
+CREATE INDEX idx_insight_negocio_estado
+ON guateayuda.insight_ia (
+    negocio_id,
+    estado
+);
+
+
+-- ============================================================
+-- FUNCIÓN PARA actualizado_en
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION guateayuda.fn_actualizar_timestamp()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.actualizado_en = NOW();
+    RETURN NEW;
+END;
+$$;
+
+
+-- ============================================================
+-- TRIGGERS
+-- ============================================================
+
+CREATE TRIGGER trg_negocio_actualizado
+BEFORE UPDATE ON guateayuda.negocio
+FOR EACH ROW
+EXECUTE FUNCTION guateayuda.fn_actualizar_timestamp();
+
+
+CREATE TRIGGER trg_producto_actualizado
+BEFORE UPDATE ON guateayuda.producto
+FOR EACH ROW
+EXECUTE FUNCTION guateayuda.fn_actualizar_timestamp();
+
+
+COMMIT;
