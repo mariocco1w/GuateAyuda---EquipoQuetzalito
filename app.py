@@ -15,7 +15,12 @@ Uso:
     python app.py
 """
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for, g, send_file
+import functools
+import io
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
 
 import db
 from analytics import (
@@ -34,6 +39,16 @@ import interpreter
 import service
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"  # En producción, usar variable de entorno
+
+
+def login_required(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +76,73 @@ def _no_encontrado(mensaje="Negocio no encontrado."):
 @app.get("/")
 def index():
     return render_template("index.html")
+
+# ---------------------------------------------------------------------------
+# Autenticación y Registro
+# ---------------------------------------------------------------------------
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        # Simulación simple de login
+        session["user_id"] = 1
+        session["negocio_id"] = 1
+        return redirect(url_for("dashboard_view"))
+    return render_template("login.html")
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        # Simulación simple de registro
+        session["user_id"] = 1
+        session["negocio_id"] = 1
+        return redirect(url_for("configuracion_empresa"))
+    return render_template("register.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
+
+@app.route("/empresa/configuracion", methods=["GET", "POST"])
+@login_required
+def configuracion_empresa():
+    return render_template("configuracion.html")
+
+
+@app.get("/dashboard")
+@login_required
+def dashboard_view():
+    return render_template("dashboard.html")
+
+
+@app.get("/chat")
+@login_required
+def chat_view():
+    return render_template("chat.html")
+
+
+
+@app.get("/reportes")
+@login_required
+def generar_reporte():
+    negocio_id = session.get("negocio_id")
+    
+    # Crear PDF en memoria
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    p.drawString(100, 750, f"Reporte de Negocio: {negocio_id}")
+    p.drawString(100, 730, "Resumen: Ventas, Gastos, Producción.")
+    p.showPage()
+    p.save()
+    
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name="reporte.pdf", mimetype="application/pdf")
+
+
 
 
 @app.get("/api")
