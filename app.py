@@ -193,7 +193,7 @@ def api_index():
 @app.get("/api/negocios")
 def listar_negocios():
     try:
-        filas = db.query("SELECT id, nombre, COALESCE(actividad_principal, actividad) AS actividad, COALESCE(ubicacion, municipio, departamento) AS ubicacion FROM negocio ORDER BY id")
+        filas = db.query("SELECT id, nombre, COALESCE(actividad_principal, '') AS actividad, CONCAT_WS(', ', municipio, departamento) AS ubicacion FROM negocio ORDER BY id")
     except Exception as exc:
         return _bd_error(exc)
     return jsonify({"negocios": filas})
@@ -203,7 +203,7 @@ def listar_negocios():
 def info_negocio(negocio_id):
     try:
         fila = db.query_one(
-            "SELECT id, nombre, COALESCE(actividad_principal, actividad) AS actividad, COALESCE(ubicacion, municipio, departamento) AS ubicacion FROM negocio WHERE id = %s",
+            "SELECT id, nombre, COALESCE(actividad_principal, '') AS actividad, CONCAT_WS(', ', municipio, departamento) AS ubicacion FROM negocio WHERE id = %s",
             (negocio_id,),
         )
     except Exception as exc:

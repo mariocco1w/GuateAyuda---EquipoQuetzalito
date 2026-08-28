@@ -5,11 +5,18 @@ Comedor Doña María, se puebla en detalle para que el dashboard y el motor
 analítico tengan qué calcular. Los datos son 100% ficticios y deben
 identificarse como tal (marketing demo).
 
+Compatibilidad: funciona sobre el esquema PostgreSQL de `bd/schema.sql`
+(en Render) y sobre el fallback SQLite de `db.py`. Los ids son auto-generados
+(GENERATED ALWAYS AS IDENTITY en PostgreSQL), por lo que NO se insertan ids
+explícitos; se usa RETURNING para obtener el id generado.
+
 Uso:
     python seed.py
+    python seed.py --force   # re-crea el esquema y re-puebla desde cero
 """
 
-from datetime import date, datetime, timedelta
+import sqlite3
+from datetime import date, timedelta
 
 import db
 
@@ -18,58 +25,104 @@ import db
 DEMO_TAG = "DEMO"
 
 
+def _ejecutar_returning(sql, params):
+    """Ejecuta un INSERT y devuelve la primer columna de la fila insertada."""
+    conn = db.get_conn()
+    try:
+        if db._USE_SQLITE or isinstance(conn, sqlite3.Connection):
+            sql_sqlite = db._convert_sql_for_sqlite(sql)
+            # SQLite no soporta RETURNING; obtener el último id.
+            cur = conn.cursor()
+            cur.execute(sql_sqlite, params or ())
+            conn.commit()
+            cur.execute("SELECT last_insert_rowid()")
+            return cur.fetchone()[0]
+        else:
+            with conn.cursor() as cur:
+                cur.execute(sql + " RETURNING id", params)
+                row = cur.fetchone()
+                conn.commit()
+                return row[0]
+    except Exception:
+        conn.rollback() if hasattr(conn, "rollback") else None
+        raise
+    finally:
+        conn.close()
+
+
 def _insertar_negocio(nombre, actividad, ubicacion):
-    """Inserta un negocio y devuelve su id. Calcula el id numérico máximo."""
-    fila = db.query_one("SELECT COALESCE(MAX(id), 0) AS max_id FROM negocio")
-    nid = int(fila["max_id"]) + 1
+    """Inserta un negocio y devuelve su id (auto-generado).
+
+    El esquema de `negocio` usa `actividad_principal`, `departamento` y
+    `municipio` (no hay columnas `actividad` ni `ubicacion`).
+    """
     propietario = "María Xitumul" if "María" in nombre else "Propietario Demo"
-    db.execute(
-        "INSERT INTO negocio (id, nombre, propietario, actividad_principal, actividad, departamento, municipio, ubicacion) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-        (nid, f"{nombre} ({DEMO_TAG})", propietario, actividad, actividad, "Guatemala", ubicacion, ubicacion),
+    sql = (
+        "INSERT INTO negocio "
+        "(nombre, propietario, actividad_principal, descripcion, departamento, municipio) "
+        "VALUES (%s, %s, %s, %s, %s, %s)"
     )
-    return nid
+    return _ejecutar_returning(sql, (
+        f"{nombre} ({DEMO_TAG})",
+        propietario,
+        actividad,
+        "Negocio de demostración para GuateAyuda (no real).",
+        "Guatemala",
+        ubicacion,
+    ))
 
 
 def _insertar_producto(negocio_id, nombre, precio, existencia, minimo):
-    """Inserta un producto y devuelve su id."""
-    fila = db.query_one("SELECT COALESCE(MAX(id), 0) AS max_id FROM producto")
-    pid = int(fila["max_id"]) + 1
-    db.execute(
-        "INSERT INTO producto (id, negocio_id, nombre, precio_referencia, precio, existencia, inventario_minimo, minimo) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-        (pid, negocio_id, nombre, precio, precio, existencia, minimo, minimo),
+    """Inserta un producto y devuelve su id (auto-generado).
+
+    El esquema de `producto` usa `precio_referencia` e `inventario_minimo`
+    (no hay `precio` ni `minimo`).
+    """
+    sql = (
+        "INSERT INTO producto "
+        "(negocio_id, nombre, tipo_item, unidad_medida, precio_referencia, "
+        "existencia, inventario_minimo, atributos) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
     )
-    return pid
+    return _ejecutar_returning(sql, (
+        negocio_id,
+        f"{nombre} ({DEMO_TAG})" ,
+        "PRODUCTO",
+        "unidad",
+        precio,
+        existencia,
+        minimo,
+        '{}',
+    ))
 
 
 def _insertar_venta(negocio_id, producto_id, cantidad, precio_unitario, fecha):
     """Inserta una transacción tipo venta + su detalle, devolviendo el total."""
     subtotal = cantidad * precio_unitario
-    fila = db.query_one("SELECT COALESCE(MAX(id), 0) AS max_id FROM transaccion")
-    tid = int(fila["max_id"]) + 1
-    db.execute(
-        "INSERT INTO transaccion (id, negocio_id, tipo, fecha, descripcion, monto) "
-        "VALUES (%s, %s, %s, %s, %s, %s)",
-        (tid, negocio_id, "VENTA", fecha, f"Venta (demo) de {cantidad} unidades", subtotal),
+    tid = _ejecutar_returning(
+        "INSERT INTO transaccion "
+        "(negocio_id, tipo, fecha, descripcion, monto, moneda, origen, estado) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (negocio_id, "VENTA", fecha, f"Venta (demo) de {cantidad} unidades",
+         subtotal, "GTQ", "WEB", "CONFIRMADA"),
     )
     db.execute(
         "INSERT INTO detalle_venta "
-        "(id, negocio_id, transaccion_id, producto_id, cantidad, precio_unitario, subtotal) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (tid, negocio_id, tid, producto_id, cantidad, precio_unitario, subtotal),
+        "(negocio_id, transaccion_id, producto_id, cantidad, precio_unitario, subtotal) "
+        "VALUES (%s, %s, %s, %s, %s, %s)",
+        (negocio_id, tid, producto_id, cantidad, precio_unitario, subtotal),
     )
     return subtotal
 
 
 def _insertar_gasto(negocio_id, descripcion, monto, fecha):
     """Inserta una transacción tipo gasto."""
-    fila = db.query_one("SELECT COALESCE(MAX(id), 0) AS max_id FROM transaccion")
-    tid = int(fila["max_id"]) + 1
     db.execute(
-        "INSERT INTO transaccion (id, negocio_id, tipo, fecha, descripcion, monto) "
-        "VALUES (%s, %s, %s, %s, %s, %s)",
-        (tid, negocio_id, "GASTO", fecha, f"{descripcion} (demo)", monto),
+        "INSERT INTO transaccion "
+        "(negocio_id, tipo, fecha, descripcion, monto, moneda, origen, estado) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (negocio_id, "GASTO", fecha, f"{descripcion} (demo)", monto,
+         "GTQ", "WEB", "CONFIRMADA"),
     )
 
 
@@ -103,22 +156,18 @@ def seed_comedor_maria():
     """Puebla el caso principal (Comedor Doña María) con ~22 días de actividad."""
     nid = _insertar_negocio("Comedor Doña María", "Venta de alimentos", "Zona 5, Ciudad de Guatemala")
 
-    productos = {
-        _insertar_producto(nid, "Almuerzo", 25, 40, 10): "Almuerzo",
-        _insertar_producto(nid, "Café", 12, 80, 30): "Café",
-        _insertar_producto(nid, "Desayuno", 20, 25, 8): "Desayuno",
-        _insertar_producto(nid, "Pan con pollo", 15, 50, 15): "Pan con pollo",
-        _insertar_producto(nid, "Gaseosa", 10, 12, 15): "Gaseosa",
-    }
+    # Precios y stock base reales por nombre.
+    precios = {"Almuerzo": 25, "Café": 12, "Desayuno": 20, "Pan con pollo": 15, "Gaseosa": 10}
+    stock_base = {"Almuerzo": 40, "Café": 80, "Desayuno": 25, "Pan con pollo": 50, "Gaseosa": 12}
+
+    # Crear productos y registrar el mapa nombre -> id auto-generado.
+    productos = {}
+    for nombre, precio in precios.items():
+        pid_ = _insertar_producto(nid, nombre, precio, stock_base[nombre], 10)
+        productos[nombre] = pid_
 
     # Patrón de actividad diaria: más fines de semana, variación leve.
-    base = {
-        "Almuerzo": 8,
-        "Café": 12,
-        "Desayuno": 5,
-        "Pan con pollo": 10,
-        "Gaseosa": 6,
-    }
+    base = {"Almuerzo": 8, "Café": 12, "Desayuno": 5, "Pan con pollo": 10, "Gaseosa": 6}
 
     inicio = date.today() - timedelta(days=22)
     total_vendido_dia = {}
@@ -128,10 +177,9 @@ def seed_comedor_maria():
         factor = 1.25 if es_fin_semana else 1.0
 
         total_vendido_dia[dia] = 0.0
-        for pid, nombre in productos.items():
+        for nombre, pid_ in productos.items():
             cantidad = int(round(base[nombre] * factor * (0.85 + (i % 5) * 0.05)))
-            precio = [25, 12, 20, 15, 10][list(productos.keys()).index(pid)]
-            total = _insertar_venta(nid, pid, cantidad, precio, dia)
+            total = _insertar_venta(nid, pid_, cantidad, precios[nombre], dia)
             total_vendido_dia[dia] += total
 
         # Un gasto cada 2-3 días (verduras, gas, insumos).
@@ -140,8 +188,7 @@ def seed_comedor_maria():
         if i % 3 == 0:
             _insertar_gasto(nid, "Gas / combustible", 60, dia)
 
-    print(f"  + {productos[list(productos.keys())[0]]}..."  # placeholder
-          f" Caso principal generado: 22 días de actividad.")
+    print(f"  + Caso principal generado: 22 días de actividad.")
     print(f"    Ventas de hoy: Q{sum(total_vendido_dia.values()):,.0f} (acumulado demo)")
 
     return nid
