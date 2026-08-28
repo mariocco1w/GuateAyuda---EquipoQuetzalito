@@ -5,3 +5,10 @@ __pycache__/
 
 # Base de datos local (producción usa PostgreSQL de Render)
 guateayuda.db
+
+# Notas / archivos temporales que no deben subirse
+static/ale.txt
+templates/ale.txt
+NOTAS-*.md
+PERSONALIZACI*.md
+MEJORAR*.md
