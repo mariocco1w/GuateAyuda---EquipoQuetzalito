@@ -39,7 +39,7 @@ def client(monkeypatch):
 
 
 def test_index(client):
-    r = client.get("/")
+    r = client.get("/api")
     assert r.status_code == 200
     data = r.get_json()
     assert data["api"] == "GuateAyuda Backend"

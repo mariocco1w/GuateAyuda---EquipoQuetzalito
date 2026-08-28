@@ -30,30 +30,34 @@ def indicadores_principales(negocio_id):
     """Indicadores principales del dashboard (sección 9):
     ventas registradas, gastos registrados, número de operaciones, productos activos.
     """
-    total_ventas = db.query_one(
+    total_ventas_res = db.query_one(
         "SELECT COALESCE(SUM(dv.subtotal), 0) AS total "
         "FROM detalle_venta dv "
         "JOIN transaccion t ON t.id = dv.transaccion_id "
-        "WHERE t.negocio_id = %s",
+        "WHERE t.negocio_id = %s AND UPPER(t.tipo) = 'VENTA'",
         (negocio_id,),
-    )["total"]
+    )
+    total_ventas = total_ventas_res["total"] if total_ventas_res else 0
 
-    total_gastos = db.query_one(
+    total_gastos_res = db.query_one(
         "SELECT COALESCE(SUM(monto), 0) AS total "
         "FROM transaccion "
-        "WHERE negocio_id = %s AND tipo = %s",
-        (negocio_id, TIPO_GASTO),
-    )["total"]
+        "WHERE negocio_id = %s AND UPPER(tipo) = 'GASTO'",
+        (negocio_id,),
+    )
+    total_gastos = total_gastos_res["total"] if total_gastos_res else 0
 
-    num_operaciones = db.query_one(
+    num_operaciones_res = db.query_one(
         "SELECT COUNT(*) AS n FROM transaccion WHERE negocio_id = %s",
         (negocio_id,),
-    )["n"]
+    )
+    num_operaciones = num_operaciones_res["n"] if num_operaciones_res else 0
 
-    productos_activos = db.query_one(
+    productos_activos_res = db.query_one(
         "SELECT COUNT(*) AS n FROM producto WHERE negocio_id = %s",
         (negocio_id,),
-    )["n"]
+    )
+    productos_activos = productos_activos_res["n"] if productos_activos_res else 0
 
     return {
         "ventas_registradas": float(total_ventas or 0),
@@ -70,12 +74,12 @@ def ventas_por_dia(negocio_id, dias=30):
         SELECT t.fecha::date AS dia, COALESCE(SUM(dv.subtotal), 0) AS total
         FROM transaccion t
         JOIN detalle_venta dv ON dv.transaccion_id = t.id
-        WHERE t.negocio_id = %s AND t.tipo = %s
+        WHERE t.negocio_id = %s AND UPPER(t.tipo) = 'VENTA'
         GROUP BY t.fecha::date
         ORDER BY t.fecha::date DESC
         LIMIT %s
         """,
-        (negocio_id, TIPO_VENTA, dias),
+        (negocio_id, dias),
     )
     filas.reverse()
     return [{"dia": str(f["dia"]), "total": float(f["total"])} for f in filas]
@@ -87,12 +91,12 @@ def gastos_por_dia(negocio_id, dias=30):
         """
         SELECT fecha::date AS dia, COALESCE(SUM(monto), 0) AS total
         FROM transaccion
-        WHERE negocio_id = %s AND tipo = %s
+        WHERE negocio_id = %s AND UPPER(tipo) = 'GASTO'
         GROUP BY fecha::date
         ORDER BY fecha::date DESC
         LIMIT %s
         """,
-        (negocio_id, TIPO_GASTO, dias),
+        (negocio_id, dias),
     )
     filas.reverse()
     return [{"dia": str(f["dia"]), "total": float(f["total"])} for f in filas]
@@ -108,12 +112,12 @@ def top_productos(negocio_id, n=5):
         FROM detalle_venta dv
         JOIN transaccion t ON t.id = dv.transaccion_id
         JOIN producto p ON p.id = dv.producto_id
-        WHERE t.negocio_id = %s AND t.tipo = %s
+        WHERE t.negocio_id = %s AND UPPER(t.tipo) = 'VENTA'
         GROUP BY p.nombre
         ORDER BY ingresos DESC
         LIMIT %s
         """,
-        (negocio_id, TIPO_VENTA, n),
+        (negocio_id, n),
     )
     return [
         {
@@ -126,17 +130,13 @@ def top_productos(negocio_id, n=5):
 
 
 def inventario_bajo(negocio_id):
-    """Productos con existencia <= mínimo (regla de la sección 13).
-
-    Nota: requiere la columna `minimo` en la tabla `producto`. Si el esquema
-    del compañero no la incluye aún, la consulta lo maneja con COALESCE.
-    """
+    """Productos con existencia <= mínimo (regla de la sección 13)."""
     filas = db.query(
         """
-        SELECT nombre, existencia, COALESCE(minimo, 0) AS minimo
+        SELECT nombre, existencia, COALESCE(inventario_minimo, minimo, 0) AS minimo
         FROM producto
         WHERE negocio_id = %s
-          AND existencia <= COALESCE(minimo, 0)
+          AND existencia <= COALESCE(inventario_minimo, minimo, 0)
         ORDER BY existencia ASC
         """,
         (negocio_id,),
@@ -152,21 +152,17 @@ def inventario_bajo(negocio_id):
 
 
 def tendencia_ventas(negocio_id, periodos=2):
-    """Compara períodos consecutivos y describe el cambio porcentual.
-
-    Usa media móvil simple sobre los últimos `periodos` bloques de 7 días.
-    Se reporta como "registradas", nunca como predicción (sección 13 y 23).
-    """
+    """Compara períodos consecutivos y describe el cambio porcentual."""
     filas = db.query(
         """
         SELECT fecha::date AS dia, COALESCE(SUM(dv.subtotal), 0) AS total
         FROM transaccion t
         JOIN detalle_venta dv ON dv.transaccion_id = t.id
-        WHERE t.negocio_id = %s AND t.tipo = %s
+        WHERE t.negocio_id = %s AND UPPER(t.tipo) = 'VENTA'
         GROUP BY t.fecha::date
         ORDER BY t.fecha::date
         """,
-        (negocio_id, TIPO_VENTA),
+        (negocio_id,),
     )
     if len(filas) < 2:
         return {

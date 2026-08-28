@@ -59,9 +59,9 @@ def _buscar_o_crear_producto(negocio_id, nombre, precio=None):
 
     pid = _siguiente_id("producto")
     db.execute(
-        "INSERT INTO producto (id, negocio_id, nombre, precio, existencia, minimo) "
-        "VALUES (%s, %s, %s, %s, 0, 0)",
-        (pid, negocio_id, nombre, precio),
+        "INSERT INTO producto (id, negocio_id, nombre, precio_referencia, precio, existencia, inventario_minimo, minimo) "
+        "VALUES (%s, %s, %s, %s, %s, 0, 0, 0)",
+        (pid, negocio_id, nombre, precio, precio),
     )
     return pid
 
@@ -74,13 +74,16 @@ def _siguiente_id(tabla):
 def _registrar_interaccion(negocio_id, mensaje_humano, estructura, confirmado):
     try:
         iid = _siguiente_id("interaccion")
+        tipo = (estructura.get("tipo") or "").upper()
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         db.execute(
             "INSERT INTO interaccion "
-            "(id, negocio_id, mensaje_original, tipo_detectado, datos_extraidos, confirmado, fecha) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            "(id, negocio_id, mensaje_original, intent, tipo_detectado, estructura, datos_extraidos, confirmado, creado_en) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (
-                iid, negocio_id, mensaje_humano, estructura.get("tipo"),
-                to_json(estructura), confirmado, datetime.now(),
+                iid, negocio_id, mensaje_humano, tipo,
+                estructura.get("tipo"), to_json(estructura), to_json(estructura),
+                1 if confirmado else 0, ahora,
             ),
         )
     except Exception as exc:  # no romper el guardado principal por el registro
@@ -114,16 +117,17 @@ def guardar_venta(negocio_id, operacion):
         raise ValueError(f"No se pudo asociar el producto '{nombre}'.")
 
     tid = _siguiente_id("transaccion")
+    ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     db.execute(
         "INSERT INTO transaccion (id, negocio_id, tipo, fecha, descripcion, monto) "
         "VALUES (%s, %s, %s, %s, %s, %s)",
-        (tid, negocio_id, "venta", datetime.now(), f"Venta de {cantidad} {nombre}", subtotal),
+        (tid, negocio_id, "VENTA", ahora, f"Venta de {cantidad} {nombre}", subtotal),
     )
     db.execute(
         "INSERT INTO detalle_venta "
-        "(id, transaccion_id, producto_id, cantidad, precio_unitario, subtotal) "
-        "VALUES (%s, %s, %s, %s, %s, %s)",
-        (tid, tid, producto_id, cantidad, precio_unitario, subtotal),
+        "(id, negocio_id, transaccion_id, producto_id, cantidad, precio_unitario, subtotal) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (tid, negocio_id, tid, producto_id, cantidad, precio_unitario, subtotal),
     )
 
     # Actualizar inventario (descontar lo vendido).
@@ -142,10 +146,11 @@ def guardar_gasto(negocio_id, operacion):
         raise ValueError("Monto de gasto inválido o ausente.")
 
     tid = _siguiente_id("transaccion")
+    ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     db.execute(
         "INSERT INTO transaccion (id, negocio_id, tipo, fecha, descripcion, monto) "
         "VALUES (%s, %s, %s, %s, %s, %s)",
-        (tid, negocio_id, "gasto", datetime.now(), concepto, monto),
+        (tid, negocio_id, "GASTO", ahora, concepto, monto),
     )
     return {"tipo": "gasto", "concepto": concepto, "monto": monto}
 

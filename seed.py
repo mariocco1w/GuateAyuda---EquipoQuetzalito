@@ -22,10 +22,11 @@ def _insertar_negocio(nombre, actividad, ubicacion):
     """Inserta un negocio y devuelve su id. Calcula el id numérico máximo."""
     fila = db.query_one("SELECT COALESCE(MAX(id), 0) AS max_id FROM negocio")
     nid = int(fila["max_id"]) + 1
+    propietario = "María Xitumul" if "María" in nombre else "Propietario Demo"
     db.execute(
-        "INSERT INTO negocio (id, nombre, actividad, ubicacion) "
-        "VALUES (%s, %s, %s, %s)",
-        (nid, f"{nombre} ({DEMO_TAG})", actividad, ubicacion),
+        "INSERT INTO negocio (id, nombre, propietario, actividad_principal, actividad, departamento, municipio, ubicacion) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (nid, f"{nombre} ({DEMO_TAG})", propietario, actividad, actividad, "Guatemala", ubicacion, ubicacion),
     )
     return nid
 
@@ -35,9 +36,9 @@ def _insertar_producto(negocio_id, nombre, precio, existencia, minimo):
     fila = db.query_one("SELECT COALESCE(MAX(id), 0) AS max_id FROM producto")
     pid = int(fila["max_id"]) + 1
     db.execute(
-        "INSERT INTO producto (id, negocio_id, nombre, precio, existencia, minimo) "
-        "VALUES (%s, %s, %s, %s, %s, %s)",
-        (pid, negocio_id, nombre, precio, existencia, minimo),
+        "INSERT INTO producto (id, negocio_id, nombre, precio_referencia, precio, existencia, inventario_minimo, minimo) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (pid, negocio_id, nombre, precio, precio, existencia, minimo, minimo),
     )
     return pid
 
@@ -50,13 +51,13 @@ def _insertar_venta(negocio_id, producto_id, cantidad, precio_unitario, fecha):
     db.execute(
         "INSERT INTO transaccion (id, negocio_id, tipo, fecha, descripcion, monto) "
         "VALUES (%s, %s, %s, %s, %s, %s)",
-        (tid, negocio_id, "venta", fecha, f"Venta (demo) de {cantidad} unidades", subtotal),
+        (tid, negocio_id, "VENTA", fecha, f"Venta (demo) de {cantidad} unidades", subtotal),
     )
     db.execute(
         "INSERT INTO detalle_venta "
-        "(id, transaccion_id, producto_id, cantidad, precio_unitario, subtotal) "
-        "VALUES (%s, %s, %s, %s, %s, %s)",
-        (tid, tid, producto_id, cantidad, precio_unitario, subtotal),
+        "(id, negocio_id, transaccion_id, producto_id, cantidad, precio_unitario, subtotal) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (tid, negocio_id, tid, producto_id, cantidad, precio_unitario, subtotal),
     )
     return subtotal
 
@@ -68,7 +69,7 @@ def _insertar_gasto(negocio_id, descripcion, monto, fecha):
     db.execute(
         "INSERT INTO transaccion (id, negocio_id, tipo, fecha, descripcion, monto) "
         "VALUES (%s, %s, %s, %s, %s, %s)",
-        (tid, negocio_id, "gasto", fecha, f"{descripcion} (demo)", monto),
+        (tid, negocio_id, "GASTO", fecha, f"{descripcion} (demo)", monto),
     )
 
 

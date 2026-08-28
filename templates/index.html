@@ -37,6 +37,16 @@
                 <span>Inicio</span>
             </a>
 
+            <a href="#dashboard" class="nav-item">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="#chat" class="nav-item">
+                <i class="fa-solid fa-comments"></i>
+                <span>Chat IA</span>
+            </a>
+
             <a href="#clientes" class="nav-item">
                 <i class="fa-solid fa-users"></i>
                 <span>Clientes</span>
@@ -390,6 +400,78 @@
 
             </div>
         </section>
+        <!-- SECCIÓN DE DASHBOARD -->
+        <section id="dashboard" style="display: none; padding: 50px 40px; overflow-y: auto; height: 100vh; background: var(--background);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <span style="background-color: #E9F8FB; color: #105465; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;">
+                    📊 Comedor Doña María · Panel de Control
+                </span>
+                <h2 style="color: #105465; font-size: 2.2rem; margin-top: 15px;">Dashboard del Negocio</h2>
+                <p style="color: #5B7076;">Indicadores principales, inventario y rendimiento diario en tiempo real.</p>
+            </div>
+
+            <!-- Tarjetas KPI -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto 30px auto;">
+                <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <div style="color: #5B7076; font-size: 0.9rem; margin-bottom: 8px;">Ventas Registradas</div>
+                    <div id="kpi-ventas" style="color: #105465; font-size: 1.8rem; font-weight: bold;">Q0.00</div>
+                </div>
+                <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <div style="color: #5B7076; font-size: 0.9rem; margin-bottom: 8px;">Gastos Registrados</div>
+                    <div id="kpi-gastos" style="color: #cc0000; font-size: 1.8rem; font-weight: bold;">Q0.00</div>
+                </div>
+                <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <div style="color: #5B7076; font-size: 0.9rem; margin-bottom: 8px;">Operaciones</div>
+                    <div id="kpi-operaciones" style="color: #3A8F5B; font-size: 1.8rem; font-weight: bold;">0</div>
+                </div>
+                <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <div style="color: #5B7076; font-size: 0.9rem; margin-bottom: 8px;">Productos Activos</div>
+                    <div id="kpi-productos" style="color: #3EBFE0; font-size: 1.8rem; font-weight: bold;">0</div>
+                </div>
+            </div>
+
+            <!-- Alertas y Perfil Productivo -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; max-width: 1100px; margin: 0 auto;">
+                <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED;">
+                    <h3 style="color: #105465; margin-bottom: 15px; font-size: 1.2rem;"><i class="fa-solid fa-triangle-exclamation" style="color: #cc0000; margin-right: 8px;"></i> Inventario Bajo</h3>
+                    <div id="lista-inventario-bajo" style="color: #5B7076; font-size: 0.95rem;">Cargando inventario...</div>
+                </div>
+                <div style="background: white; padding: 25px; border-radius: 16px; border: 1px solid #DCEBED;">
+                    <h3 style="color: #105465; margin-bottom: 15px; font-size: 1.2rem;"><i class="fa-solid fa-star" style="color: #3EBFE0; margin-right: 8px;"></i> Top Productos</h3>
+                    <div id="lista-top-productos" style="color: #5B7076; font-size: 0.95rem;">Cargando top productos...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN DE CHAT IA -->
+        <section id="chat" style="display: none; padding: 50px 40px; overflow-y: auto; height: 100vh; background: var(--background);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <span style="background-color: #E9F8FB; color: #105465; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;">
+                    🤖 Chat IA Conversacional · GuateAyuda
+                </span>
+                <h2 style="color: #105465; font-size: 2.2rem; margin-top: 15px;">¿Qué ocurrió hoy en tu negocio?</h2>
+                <p style="color: #5B7076;">Escribe tu venta, gasto o inventario en lenguaje cotidiano (Ej: "Vendí 8 almuerzos a Q25").</p>
+            </div>
+
+            <div style="max-width: 750px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; border: 1px solid #DCEBED; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <div style="display: flex; gap: 12px; margin-bottom: 25px;">
+                    <input type="text" id="chat-mensaje" placeholder="Escribe tu operación aquí..." style="flex: 1; padding: 14px 16px; border: 1.5px solid #DCEBED; border-radius: 10px; font-size: 1rem; outline: none;">
+                    <button id="btn-enviar-chat" style="background: #3EBFE0; border: none; color: white; padding: 0 24px; border-radius: 10px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+
+                <div id="chat-resultado-container" style="display: none; background: #F7FBFC; border: 1px dashed #3EBFE0; padding: 20px; border-radius: 12px;">
+                    <h3 style="color: #105465; margin-bottom: 12px; font-size: 1.1rem;">✨ Información Detectada por GuateAyuda:</h3>
+                    <div id="chat-detalles" style="color: #041216; font-size: 0.95rem; margin-bottom: 20px; line-height: 1.6;"></div>
+                    <div style="display: flex; gap: 15px;">
+                        <button id="btn-confirmar" style="background: #3A8F5B; border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">[ Confirmar ]</button>
+                        <button id="btn-corregir" style="background: #cc0000; border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">[ Corregir ]</button>
+                    </div>
+                </div>
+
+                <div id="chat-status" style="margin-top: 15px; text-align: center; color: #5B7076; font-size: 0.9rem;"></div>
+            </div>
+        </section>
+
         <section id="faq" style="display: none; padding: 40px;"></section>
 
         <!-- SECCIÓN DE LICENCIA (VISTA DE MODELO DE NEGOCIO CORREGIDA) -->
