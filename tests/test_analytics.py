@@ -11,6 +11,7 @@ import analytics.engine
 import service
 from analytics import (
     indicadores_principales,
+    productos_de_negocio,
     tendencia_ventas,
 )
 
@@ -73,6 +74,19 @@ def test_tendencia_sin_suficiente_historial(monkeypatch, mock_db):
     mock_db._q["GROUP BY t.fecha::date"] = [{"dia": "1", "total": 100}]
     res = tendencia_ventas(1)
     assert res["disponible"] is False
+
+
+def test_productos_de_negocio(mock_db):
+    mock_db._q["FROM producto"] = [
+        {"nombre": "café", "precio": 12, "existencia": 40, "minimo": 5, "activo": 1},
+        {"nombre": "almuerzo", "precio": 25, "existencia": 3, "minimo": 4, "activo": 1},
+    ]
+    res = productos_de_negocio(1)
+    assert len(res) == 2
+    assert res[0]["producto"] == "café"
+    assert res[0]["precio"] == 12.0
+    assert res[0]["existencia"] == 40.0
+    assert res[0]["minimo"] == 5.0
 
 
 # ---------------------------------------------------------------------------

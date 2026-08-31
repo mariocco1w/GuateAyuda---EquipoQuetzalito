@@ -3,42 +3,37 @@
 {% block content %}
 <div class="page-head">
     <div>
-        <span class="page-badge"><i class="fa-solid fa-robot"></i> Asistente IA · GuateAyuda</span>
+        <span class="page-badge"><i class="fa-solid fa-user-tie"></i> Asesor Virtual · GuateAyuda</span>
         <h1>¿Qué ocurrió hoy en tu negocio?</h1>
-        <p>Escribe en lenguaje natural y GuateAyuda registrará la operación por ti.</p>
+        <p>Escribe en lenguaje natural: registra tus operaciones o consulta tus productos, ventas e inventario.</p>
     </div>
 </div>
 
 <div class="chat-card">
     <div class="chat-card-header">
-        <div class="chat-bot"><i class="fa-solid fa-robot"></i></div>
+        <div class="chat-bot"><i class="fa-solid fa-user-tie"></i></div>
         <div>
-            <h3>Asistente de GuateAyuda</h3>
-            <span>Online · responde a tus operaciones</span>
+            <h3>Asesor virtual de GuateAyuda</h3>
+            <span>Online · registra operaciones y responde tus consultas</span>
         </div>
     </div>
     <div class="chat-card-body">
+        <div class="chat-conversacion" id="chat-conversacion"></div>
+
         <div class="chat-input-row">
-            <input type="text" id="chat-mensaje" placeholder="Ej: 'Vendí 8 almuerzos a Q25'..." autocomplete="off">
+            <input type="text" id="chat-mensaje" placeholder="Ej: 'Vendí 8 almuerzos a Q25' o '¿Qué productos tengo?'..." autocomplete="off">
             <button id="btn-enviar-chat" aria-label="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
-
-        <div id="chat-resultado-container" class="chat-result">
-            <h4><i class="fa-solid fa-sparkles"></i> Información detectada</h4>
-            <div id="chat-detalles"></div>
-            <div class="chat-actions">
-                <button id="btn-confirmar" class="btn-confirm"><i class="fa-solid fa-check"></i> Confirmar</button>
-                <button id="btn-corregir" class="btn-correct"><i class="fa-solid fa-pen"></i> Corregir</button>
-            </div>
-        </div>
-
-        <div id="chat-status" class="chat-status"></div>
 
         <div class="chat-suggestions" id="chat-sugerencias">
             <span class="chip" data-msg="Vendí 8 almuerzos a Q25">Vendí 8 almuerzos a Q25</span>
             <span class="chip" data-msg="Gasté Q150 comprando verduras">Gasté Q150 comprando verduras</span>
             <span class="chip" data-msg="Me quedan 10 gaseosas">Me quedan 10 gaseosas</span>
             <span class="chip" data-msg="Se fabricaron 24 unidades de vasos">Se fabricaron 24 unidades de vasos</span>
+            <span class="chip" data-msg="¿Qué productos tengo?">¿Qué productos tengo?</span>
+            <span class="chip" data-msg="¿Cómo van mis ventas?">¿Cómo van mis ventas?</span>
+            <span class="chip" data-msg="¿Qué me queda?">¿Qué me queda?</span>
+            <span class="chip" data-msg="Dame un resumen de mi negocio">Dame un resumen de mi negocio</span>
         </div>
     </div>
 </div>

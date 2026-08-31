@@ -61,46 +61,171 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(err => console.error("Error top productos:", err));
     }
 
-    // Chat IA Lógica
+    // ------------------------------------------------------------------
+    // Asesor Virtual - conversación por burbujas
+    // ------------------------------------------------------------------
     let tokensSesion = [];
     let mensajesHumanos = [];
+    let bubbleOperacion = null;
 
+    const chatConversacion = document.getElementById("chat-conversacion");
     const btnEnviar = document.getElementById("btn-enviar-chat");
     const inputMensaje = document.getElementById("chat-mensaje");
-    const resultadoContainer = document.getElementById("chat-resultado-container");
-    const chatDetalles = document.getElementById("chat-detalles");
-    const chatStatus = document.getElementById("chat-status");
-    const btnConfirmar = document.getElementById("btn-confirmar");
-    const btnCorregir = document.getElementById("btn-corregir");
 
-    if (btnEnviar) {
-        btnEnviar.addEventListener("click", enviarChat);
-        inputMensaje.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") enviarChat();
-        });
+    function _esc(texto) {
+        const s = String(texto === null || texto === undefined ? "" : texto);
+        const mapa = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+        return s.replace(/[&<>"']/g, c => mapa[c]);
+    }
+
+    function _append(html) {
+        const div = document.createElement("div");
+        div.innerHTML = html;
+        const nodo = div.firstElementChild;
+        chatConversacion.appendChild(nodo);
+        chatConversacion.scrollTop = chatConversacion.scrollHeight;
+        return nodo;
+    }
+
+    function _burbujaUsuario(mensaje) {
+        _append(`<div class="chat-msg msg-user">${_esc(mensaje)}</div>`);
+    }
+
+    function _burbujaPensando() {
+        _append(`<div class="chat-msg msg-bot chat-typing" id="chat-pensando">`
+            + `<span class="dot"></span><span class="dot"></span><span class="dot"></span>`
+            + `&nbsp; Pensando...</div>`);
+    }
+
+    function _quitarPensando() {
+        const n = document.getElementById("chat-pensando");
+        if (n) n.remove();
     }
 
     function _descripcionOperacion(op) {
         // Devuelve una línea legible con el detalle de una operación detectada.
         const t = op.operacion;
         if (op.tipo === "venta") {
-            return `<i class="fa-solid fa-cash-register" style="color:var(--green);"></i> Venta · ${t.producto} × ${t.cantidad} a Q${t.precio_unitario}`;
+            return `<i class="fa-solid fa-cash-register" style="color:var(--green);"></i> Venta · ${_esc(t.producto)} × ${t.cantidad} a Q${t.precio_unitario}`;
         } else if (op.tipo === "gasto") {
-            return `<i class="fa-solid fa-receipt" style="color:#cc0000;"></i> Gasto · ${t.concepto || t.descripcion || "gasto"} por Q${t.monto}`;
+            return `<i class="fa-solid fa-receipt" style="color:#cc0000;"></i> Gasto · ${_esc(t.concepto || t.descripcion || "gasto")} por Q${t.monto}`;
         } else if (op.tipo === "inventario") {
-            return `<i class="fa-solid fa-boxes-stacked" style="color:var(--blue-main);"></i> Inventario · ${t.producto} (${t.existencia} u.)`;
+            return `<i class="fa-solid fa-boxes-stacked" style="color:var(--blue-main);"></i> Inventario · ${_esc(t.producto)} (${t.existencia} u.)`;
         } else if (op.tipo === "produccion") {
-            return `<i class="fa-solid fa-industry" style="color:var(--blue-dark);"></i> Producción · ${t.cantidad} u. de ${t.producto}`;
+            return `<i class="fa-solid fa-industry" style="color:var(--blue-dark);"></i> Producción · ${t.cantidad} u. de ${_esc(t.producto)}`;
         }
         return `Operación · ${op.tipo}`;
+    }
+
+    function _burbujaConsulta(body) {
+        let html = `<p class="consulta-mensaje">${_esc(body.mensaje)}</p>`;
+        const datos = body.datos || [];
+        if (datos.length > 0 && datos[0].producto !== undefined) {
+            const filas = datos.map(d =>
+                `<div class="consulta-item">`
+                + `<span class="c-nombre">${_esc(d.producto)}</span>`
+                + `<span class="c-meta">Q${Number(d.precio || 0).toLocaleString()} · ${Number(d.existencia || 0)} disp · mín ${Number(d.minimo || 0)}</span>`
+                + `</div>`).join("");
+            html += `<div class="consulta-lista">${filas}</div>`;
+        } else if (datos.length > 0 && datos[0].etiqueta !== undefined) {
+            const filas = datos.map(d =>
+                `<div class="consulta-item"><span class="c-nombre">${_esc(d.etiqueta)}</span>`
+                + `<span class="c-meta">${_esc(d.valor)}</span></div>`).join("");
+            html += `<div class="consulta-lista">${filas}</div>`;
+        }
+        _append(`<div class="chat-msg msg-bot">${html}</div>`);
+    }
+
+    function _burbujaOperacion(body) {
+        const operaciones = body.operaciones || [{
+            token_sesion: body.token_sesion,
+            tipo: body.tipo,
+            operacion: body.operacion,
+            mensaje_humano: body.mensaje_humano,
+        }];
+
+        tokensSesion = operaciones.map(o => o.token_sesion);
+        mensajesHumanos = operaciones.map(o => o.mensaje_humano);
+
+        const rowsHtml = operaciones.map(op =>
+            `<div class="op-row">${_descripcionOperacion(op)}</div>`).join("");
+        let extra = "";
+        if ((body.multiples || operaciones.length > 1)) {
+            extra = `<div style="padding-top:8px;color:#5B7076;"><i class="fa-solid fa-info-circle"></i> Se detectaron ${operaciones.length} operaciones.</div>`;
+        }
+
+        const nodo = _append(`
+            <div class="chat-msg msg-bot">
+                <p class="consulta-mensaje">Detecté la información. ¿Confirmas que es correcta?</p>
+                <div class="op-list">${rowsHtml}</div>
+                ${extra}
+                <div class="chat-actions">
+                    <button class="btn-confirm" id="btn-confirmar"><i class="fa-solid fa-check"></i> Confirmar</button>
+                    <button class="btn-correct" id="btn-corregir"><i class="fa-solid fa-pen"></i> Corregir</button>
+                </div>
+            </div>`);
+
+        bubbleOperacion = nodo;
+
+        nodo.querySelector("#btn-confirmar").addEventListener("click", confirmarOperaciones);
+        nodo.querySelector("#btn-corregir").addEventListener("click", () => {
+            nodo.remove();
+            bubbleOperacion = null;
+            tokensSesion = [];
+            mensajesHumanos = [];
+            _append(`<div class="chat-msg msg-bot">Por favor, escribe el mensaje corregido.</div>`);
+            inputMensaje.focus();
+        });
+    }
+
+    function confirmarOperaciones() {
+        if (tokensSesion.length === 0) return;
+
+        _burbujaPensando();
+        const peticiones = tokensSesion.map((token, i) => {
+            return fetch(`/api/negocio/${negocioId}/operacion`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token_sesion: token, mensaje_humano: mensajesHumanos[i] || "" })
+            }).then(res => res.json());
+        });
+
+        Promise.all(peticiones)
+        .then(respuestas => {
+            _quitarPensando();
+            const fallidas = respuestas.filter(r => !r.guardado);
+            if (fallidas.length === 0) {
+                if (bubbleOperacion) bubbleOperacion.remove();
+                bubbleOperacion = null;
+                tokensSesion = [];
+                mensajesHumanos = [];
+                inputMensaje.value = "";
+                _append(`<div class="chat-msg msg-bot"><i class="fa-solid fa-circle-check" style="color:var(--green);"></i> ¡Operación(es) guardada(s) con éxito! El dashboard se actualizará.</div>`);
+            } else {
+                _append(`<div class="chat-msg msg-bot">Algunas operaciones no se guardaron. Revisa e inténtalo de nuevo.</div>`);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            _quitarPensando();
+            _append(`<div class="chat-msg msg-bot">Error al confirmar operaciones.</div>`);
+        });
     }
 
     function enviarChat() {
         const mensaje = inputMensaje.value.trim();
         if (!mensaje) return;
 
-        chatStatus.textContent = "Interpretando mensaje...";
-        resultadoContainer.style.display = "none";
+        _burbujaUsuario(mensaje);
+        inputMensaje.value = "";
+
+        if (bubbleOperacion) {
+            bubbleOperacion.remove();
+            bubbleOperacion = null;
+        }
+        tokensSesion = [];
+        mensajesHumanos = [];
+        _burbujaPensando();
 
         fetch(`/api/negocio/${negocioId}/chat`, {
             method: "POST",
@@ -109,80 +234,27 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(res => res.json().then(data => ({ status: res.status, body: data })))
         .then(({ status, body }) => {
-            if (status === 200 && body.interpretado) {
-                // Normalizar a lista de operaciones (compatibilidad con la
-                // forma simple y la forma múltiple).
-                const operaciones = body.operaciones || [{
-                    token_sesion: body.token_sesion,
-                    tipo: body.tipo,
-                    operacion: body.operacion,
-                    mensaje_humano: body.mensaje_humano,
-                }];
+            _quitarPensando();
 
-                tokensSesion = operaciones.map(o => o.token_sesion);
-                mensajesHumanos = operaciones.map(o => o.mensaje_humano);
-
-                let detalleHtml = "";
-                operaciones.forEach((op) => {
-                    detalleHtml += `<div class="op-row">${_descripcionOperacion(op)}</div>`;
-                });
-                detalleHtml = `<div class="op-list">${detalleHtml}</div>`;
-
-                if ((body.multiples || operaciones.length > 1)) {
-                    detalleHtml += `<div style="padding-top: 8px; color: #5B7076;"><i class="fa-solid fa-info-circle"></i> Se detectaron ${operaciones.length} operaciones.</div>`;
-                }
-
-                chatDetalles.innerHTML = detalleHtml;
-                resultadoContainer.style.display = "block";
-                chatStatus.textContent = "";
+            if (body.consulta) {
+                _burbujaConsulta(body);
+            } else if (status === 200 && body.interpretado) {
+                _burbujaOperacion(body);
             } else {
-                chatStatus.textContent = body.mensaje || "No se pudo interpretar la operación.";
+                _append(`<div class="chat-msg msg-bot">${_esc(body.mensaje || "No pude interpretar la operación.")}</div>`);
             }
         })
         .catch(err => {
             console.error(err);
-            chatStatus.textContent = "Error de conexión con el servidor.";
+            _quitarPensando();
+            _append(`<div class="chat-msg msg-bot">Error de conexión con el servidor.</div>`);
         });
     }
 
-    if (btnConfirmar) {
-        btnConfirmar.addEventListener("click", () => {
-            if (tokensSesion.length === 0) return;
-
-            chatStatus.textContent = "Guardando operaciones...";
-            const peticiones = tokensSesion.map((token, i) => {
-                return fetch(`/api/negocio/${negocioId}/operacion`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token_sesion: token, mensaje_humano: mensajesHumanos[i] || "" })
-                }).then(res => res.json());
-            });
-
-            Promise.all(peticiones)
-            .then(respuestas => {
-                const fallidas = respuestas.filter(r => !r.guardado);
-                if (fallidas.length === 0) {
-                    chatStatus.innerHTML = "<span style='color: #3A8F5B; font-weight: bold;'>¡Operaciones guardadas con éxito!</span>";
-                    resultadoContainer.style.display = "none";
-                    inputMensaje.value = "";
-                    tokensSesion = [];
-                    mensajesHumanos = [];
-                } else {
-                    chatStatus.textContent = "Algunas operaciones no se guardaron. Revisa e inténtalo de nuevo.";
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                chatStatus.textContent = "Error al confirmar operaciones.";
-            });
-        });
-    }
-
-    if (btnCorregir) {
-        btnCorregir.addEventListener("click", () => {
-            resultadoContainer.style.display = "none";
-            chatStatus.textContent = "Por favor, escribe el mensaje corregido.";
-            inputMensaje.focus();
+    if (btnEnviar && inputMensaje) {
+        btnEnviar.addEventListener("click", enviarChat);
+        inputMensaje.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") enviarChat();
         });
     }
 });

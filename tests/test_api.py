@@ -21,6 +21,11 @@ class MockAPI:
         return None
 
     def query(self, sql, params=None):
+        if "FROM producto" in sql:
+            return [
+                {"nombre": "café", "precio": 12, "existencia": 40, "minimo": 5, "activo": 1},
+                {"nombre": "almuerzo", "precio": 25, "existencia": 3, "minimo": 4, "activo": 1},
+            ]
         return []
 
     def execute(self, sql, params=None):
@@ -67,9 +72,57 @@ def test_chat_gasto(client):
 
 
 def test_chat_no_interpreta(client):
+    # Pregunta desconocida: respaldo amigable (200) con sugerencias, sin 422.
     r = client.post("/api/negocio/1/chat", json={"mensaje": "hola que tal"})
-    assert r.status_code == 422
-    assert r.get_json()["interpretado"] is False
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["interpretado"] is False
+    assert data["consulta"] is False
+    assert data["tipo"] == "fallback"
+    assert "Aún no entiendo" in data["mensaje"]
+
+
+def test_chat_operacion_incompleta_da_sugerencia(client):
+    # Operación incompleta: 200 con los errores de validación.
+    r = client.post("/api/negocio/1/chat", json={"mensaje": "Vendí almuerzos"})
+    data = r.get_json()
+    assert r.status_code == 200
+    assert data["interpretado"] is False
+    assert data["tipo"] == "fallback"
+    assert "Faltan datos" in data["mensaje"]
+
+
+def test_chat_consulta_asesor(client):
+    r = client.post("/api/negocio/1/chat", json={"mensaje": "¿Quién eres?"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "asesor"
+    assert "asesor virtual" in data["mensaje"].lower()
+
+
+def test_chat_consulta_productos(client):
+    r = client.post("/api/negocio/1/chat", json={"mensaje": "¿Qué productos tengo?"})
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "productos"
+    assert len(data["datos"]) == 2
+    assert data["datos"][0]["producto"] == "café"
+
+
+def test_chat_consulta_saludo(client):
+    r = client.post("/api/negocio/1/chat", json={"mensaje": "Hola"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "saludo"
+
+
+def test_chat_consulta_ventas(client):
+    r = client.post("/api/negocio/1/chat", json={"mensaje": "¿Cómo van mis ventas?"})
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "ventas"
 
 
 def test_chat_sin_mensaje(client):

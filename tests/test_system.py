@@ -84,14 +84,38 @@ def test_private_routes_protection(client):
 
 
 def test_report_generation(client):
-    """Verifica que el reporte PDF se genere estando autenticado."""
+    """Verifica que el reporte PDF se genere estando autenticado y con contenido."""
     with client.session_transaction() as sess:
         sess["user_id"] = 1
         sess["negocio_id"] = 1
-        
+
+    # Sembrar un producto y una venta para que el reporte tenga datos reales.
+    db.execute(
+        "INSERT INTO producto (negocio_id, nombre, precio, existencia, minimo) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (1, "café Cocina", 12, 40, 5),
+    )
+    p = db.query_one("SELECT id FROM producto WHERE negocio_id = 1 ORDER BY id DESC LIMIT 1")
+    db.execute(
+        "INSERT INTO transaccion (negocio_id, tipo, monto, estado, origen) "
+        "VALUES (?, 'VENTA', 96, 'CONFIRMADA', 'WEB')",
+        (1,),
+    )
+    t = db.query_one("SELECT id FROM transaccion WHERE negocio_id = 1 ORDER BY id DESC LIMIT 1")
+    db.execute(
+        "INSERT INTO detalle_venta "
+        "(negocio_id, transaccion_id, producto_id, cantidad, precio_unitario, subtotal) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (1, t["id"], p["id"], 8, 12, 96),
+    )
+
     r = client.get("/reportes")
     assert r.status_code == 200
     assert r.headers["Content-Type"] == "application/pdf"
+    # El reporte ya no es un stub de 1 KB: debe superar un umbral razonable
+    # y contener varias páginas (banda de encabezado + secciones + tabla).
+    assert len(r.data) > 4096
+    assert "/Type /Page" in r.data.decode("latin-1", "replace")
 
 
 def test_configuracion_route(client):

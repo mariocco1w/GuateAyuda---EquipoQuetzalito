@@ -57,9 +57,69 @@ def test_mensaje_vacio():
 
 
 def test_sin_operacion_reconocible():
-    r = interpretar("buenos días")
+    r = interpretar("mañana lloverá con seguridad")
     assert r["interpretado"] is False
     assert "No pude identificar" in r["mensaje"]
+
+
+def test_saludo_es_consulta():
+    r = interpretar("Hola")
+    assert r["interpretado"] is True
+    assert r["consulta"] is True
+    assert r["tipo"] == "saludo"
+    assert r["token_sesion"] is None
+
+
+def test_consulta_productos():
+    r = interpretar("¿Qué productos tengo?")
+    assert r["interpretado"] is True
+    assert r["consulta"] is True
+    assert r["tipo"] == "productos"
+
+
+def test_consulta_ventas():
+    r = interpretar("¿Cómo van mis ventas?")
+    assert r["consulta"] is True
+    assert r["tipo"] == "ventas"
+
+
+def test_consulta_gastos():
+    r = interpretar("¿Cuánto he gastado este mes?")
+    assert r["consulta"] is True
+    assert r["tipo"] == "gastos"
+
+
+def test_consulta_inventario():
+    r = interpretar("¿Qué me queda?")
+    assert r["consulta"] is True
+    assert r["tipo"] == "inventario"
+
+
+def test_consulta_resumen():
+    r = interpretar("Dame un resumen de mi negocio")
+    assert r["consulta"] is True
+    assert r["tipo"] == "resumen"
+
+
+def test_consulta_ayuda():
+    r = interpretar("¿Qué puedes hacer?")
+    assert r["consulta"] is True
+    assert r["tipo"] == "ayuda"
+
+
+def test_registro_inventario_no_es_consulta():
+    r = interpretar("Tengo 10 gaseosas")
+    assert r["interpretado"] is True
+    assert not r.get("consulta")
+    assert r["tipo"] == "inventario"
+
+
+def test_saludo_no_roba_la_venta():
+    rs = interpretar_multiples("Buenos días, vendí 8 almuerzos a Q25")
+    no_saludos = [r for r in rs if not (r.get("consulta") and r["tipo"] == "saludo")]
+    assert len(no_saludos) == 1
+    assert no_saludos[0]["tipo"] == "venta"
+    assert not no_saludos[0].get("consulta")
 
 
 def test_interpretador_genera_token():
@@ -109,3 +169,41 @@ def test_multiples_simple_unica():
     assert len(rs) == 1
     assert rs[0]["interpretado"] is True
     assert rs[0]["tipo"] == "venta"
+
+
+def test_multiples_texto_largo():
+    # Mensaje largo y conversacional con dos operaciones en una sola oración.
+    rs = interpretar_multiples(
+        "El día de hoy me ingresaron 20 tortillas y vendí una cantidad de 35 gaseosas"
+    )
+    interpretados = [r for r in rs if r.get("interpretado")]
+    assert len(interpretados) == 2
+    inv = [r for r in interpretados if r["tipo"] == "inventario"][0]["operacion"]
+    venta = [r for r in interpretados if r["tipo"] == "venta"][0]["operacion"]
+    assert inv["movimiento"] == "ENTRADA"
+    assert inv["existencia"] == 20
+    assert inv["producto"] == "tortillas"
+    assert venta["cantidad"] == 35
+    assert venta["producto"] == "gaseosas"
+
+
+def test_multiples_frase_con_semicolon_venden():
+    rs = interpretar_multiples("Gasté Q20 en panes; y vendí 5 gaseosas a Q3")
+    interpretados = [r for r in rs if r.get("interpretado")]
+    assert len(interpretados) == 2
+    tipos = {r["tipo"] for r in interpretados}
+    assert tipos == {"gasto", "venta"}
+
+
+def test_consulta_asesor():
+    for msg in ("¿Quién eres?", "¿Quién te creó?", "¿Cómo te llamas?", "Eres un bot"):
+        r = interpretar(msg)
+        assert r["consulta"] is True, msg
+        assert r["tipo"] == "asesor", msg
+
+
+def test_consulta_despedida():
+    for msg in ("Gracias", "muchas gracias", "adios", "hasta luego"):
+        r = interpretar(msg)
+        assert r["consulta"] is True, msg
+        assert r["tipo"] == "despedida", msg

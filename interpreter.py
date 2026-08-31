@@ -51,6 +51,9 @@ STOP_PRODUCTO = [
     "fabricamos", "fabricaron", "fabric[oó]", "producimos", "produjimos",
     "elaboramos", "hicimos", "hicieron", "manufacturamos", "unidades",
     "se", "ingresaron", "ingres[oó]", "entraron", "recibimos",
+    # Rellenos de lenguaje natural que ensucian el nombre del producto.
+    "me", "mi", "en", "negocio", "empresa", "tambien", "también",
+    "cantidad", "cantidades", "para", "total",
 ]
 
 # ---------------------------------------------------------------------------
@@ -68,6 +71,76 @@ PRECIO_UNITARIO_RE = re.compile(
     r"\ba\s*(?:Q\s*|q\s*)?(\d{1,4})(?:\s*quetzales?)?(?:\s*cada\b)?",
     re.IGNORECASE,
 )
+
+# ---------------------------------------------------------------------------
+# Consultas del asesor virtual (preguntas sobre el negocio)
+# ---------------------------------------------------------------------------
+
+# Intenciones de consulta detectadas por palabras clave (texto normalizado).
+# Se priorizan ANTES que las operaciones de registro; las frases de registro
+# ("tengo 10 gaseosas") no coinciden porque exigen el sustantivo de la consulta.
+CONSULTA_PATTERNS = [
+    ("asesor", re.compile(r"\b(quien eres|quien eres tu|quien te (creo|hizo|programo|invento)|"
+                          r"como te llamas|cual es tu nombre|tu nombre|eres (un|una) (bot|ia|asistente|asesor)|"
+                          r"que eres|eres inteligente)\b")),
+    ("despedida", re.compile(r"\b(gracias|muchas gracias|adios|chao|chau|hasta luego|hasta pronto|"
+                             r"nos vemos|buena suerte|exitos)\b")),
+    ("ayuda", re.compile(r"\b(ayuda(?:me)?|que puedes hacer|que puedo (?:escribir|hacer|preguntar|consultar)|"
+                         r"que preguntas puedo hacer|como (?:funciona|se usa|usar|se utiliza)|"
+                         r"que funciones tienes|necesito ayuda)\b")),
+    ("productos", re.compile(r"\bque productos?(?: tengo| hay| tienes| registra| manejo)?\b|"
+                             r"\b(?:ver|mostrar|listar|consultar|enseña(?:me)?) (?:mis |los )?productos?\b|"
+                             r"\bcuales son (?:mis |los )?productos?\b|"
+                             r"\bque vendo\b|\bcuantos productos\b|\bque hay en mi negocio\b")),
+    ("ventas", re.compile(r"\bcomo van (?:las |mis )?ventas\b|\bcuanto (?:he|hemos|has) vendido\b|"
+                          r"\bcuantas ventas\b|\bque he vendido\b|\bventas (?:de )?(?:hoy|del dia|de esta semana|de la semana)\b|"
+                          r"\btotal (?:de )?ventas\b")),
+    ("gastos", re.compile(r"\bcuanto he gastado\b|\bcuantos gastos\b|\bque gastos\b|\bmis gastos\b|"
+                          r"\btotal (?:de )?gastos\b|\ben que gaste\b|\bgastos (?:de )?(?:hoy|del dia|de esta semana|del mes)\b")),
+    ("inventario", re.compile(r"\bque me queda\b|\bcomo esta (?:mi |el |nuestro )?(?:inventario|stock)\b|\binventario bajo\b|"
+                              r"\bstock bajo\b|\bque me falta\b|\bcuanto inventario\b|\bhay (?:suficiente )?(?:inventario|stock)\b|"
+                              r"\bestado del inventario\b")),
+    ("resumen", re.compile(r"\bdame un resumen\b|\bda un resumen\b|\bresumen (?:de|del) (?:mi |el )?negocio\b|"
+                           r"\bcomo (?:esta|anda|va) (?:mi |el |nuestro )?(?:negocio|empresa)\b|\bcomo va todo\b|"
+                           r"\bestado (?:de|del) (?:mi )?negocio\b")),
+]
+
+SALUDO_RE = re.compile(r"^(hola|buenos dias|buenas tardes|buenas noches|buenas|que tal|hey|saludos|holis)"
+                       r"(?:\s*[!.¿?]+\s*)*$")
+
+
+def _es_saludo(mensaje):
+    """True si el mensaje es únicamente un saludo."""
+    return bool(SALUDO_RE.match(_normalizar(mensaje).strip()))
+
+
+def _detectar_consulta(mensaje):
+    """Detecta si el mensaje es una consulta y devuelve su intención o None."""
+    normalizado = _normalizar(mensaje)
+    for intencion, patron in CONSULTA_PATTERNS:
+        if patron.search(normalizado):
+            return intencion
+    return None
+
+
+def _consulta_de(mensaje):
+    """Intención de consulta del mensaje (saludo incluido) o None."""
+    if _es_saludo(mensaje):
+        return "saludo"
+    return _detectar_consulta(mensaje)
+
+
+def _resultado_consulta(intencion, mensaje):
+    """Estructura de una consulta del asesor virtual (sin token ni operación)."""
+    return {
+        "interpretado": True,
+        "consulta": True,
+        "tipo": intencion,
+        "intencion": intencion,
+        "mensaje_humano": mensaje,
+        "token_sesion": None,
+        "errores": [],
+    }
 
 
 def _normalizar(texto):
@@ -224,7 +297,7 @@ def _detectar_ingreso_inventario(original):
 
 # Separa el mensaje en cláusulas individuales cuando contiene varias
 # operaciones unidas por conectores.
-CLAUSULAS_RE = re.compile(r"\s+(?:y\s+|\+\s*|,\s*|y\s+tambi[eé]n\s+|"
+CLAUSULAS_RE = re.compile(r"\s+(?:y\s+|\+\s*|,\s*|;\s*|y\s+tambi[eé]n\s+|"
                           r"adem[aá]s\s+|tambi[eé]n\s+)\s*")
 
 def _dividir_clausulas(mensaje):
@@ -252,6 +325,11 @@ def interpretar(mensaje):
             "mensaje": "No se recibió ningún mensaje.",
             "token_sesion": str(uuid.uuid4()),
         }
+
+    # Las consultas del asesor virtual se resuelven antes que las operaciones.
+    consulta = _consulta_de(mensaje)
+    if consulta:
+        return _resultado_consulta(consulta, mensaje)
 
     tipo = _detectar_tipo(mensaje)
 
@@ -322,11 +400,14 @@ def interpretar_multiples(mensaje):
     """Interpreta un mensaje que puede contener varias operaciones.
 
     Divide el texto en cláusulas y devuelve una lista de resultados, uno por
-    cada operación detectada. Si no se identifica ninguna, devuelve una lista
-    con un único resultado `interpretado=False`.
+    cada operación detectada. Si el mensaje completo es una consulta del asesor
+    virtual, devuelve una lista con un único resultado `consulta=True`. Si no
+    se identifica nada, devuelve una lista con un único resultado
+    `interpretado=False`.
     """
-    clausulas = _dividir_clausulas(mensaje or "")
-    if not clausulas:
+    texto = (mensaje or "").strip()
+
+    if not texto:
         return [{
             "interpretado": False,
             "operacion": None,
@@ -334,7 +415,21 @@ def interpretar_multiples(mensaje):
             "token_sesion": str(uuid.uuid4()),
         }]
 
+    # Si el mensaje completo es una consulta, se responde como una sola.
+    consulta = _consulta_de(texto)
+    if consulta:
+        return [_resultado_consulta(consulta, texto)]
+
+    clausulas = _dividir_clausulas(texto)
     resultados = []
     for clausula in clausulas:
         resultados.append(interpretar(clausula))
+
+    # Descartar saludos puros si el mensaje también trae otra operación.
+    if len(resultados) > 1:
+        con_contenido = [r for r in resultados
+                         if not (r.get("consulta") and r.get("tipo") == "saludo")]
+        if con_contenido:
+            resultados = con_contenido
+
     return resultados

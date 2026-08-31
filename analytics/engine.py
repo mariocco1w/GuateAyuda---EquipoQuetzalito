@@ -151,6 +151,33 @@ def inventario_bajo(negocio_id):
     ]
 
 
+def productos_de_negocio(negocio_id):
+    """Lista los productos registrados del negocio (para el asesor virtual)."""
+    filas = db.query(
+        """
+        SELECT nombre,
+               COALESCE(precio_referencia, precio, 0) AS precio,
+               COALESCE(existencia, 0) AS existencia,
+               COALESCE(inventario_minimo, minimo, 0) AS minimo,
+               activo
+        FROM producto
+        WHERE negocio_id = %s
+        ORDER BY LOWER(nombre) ASC
+        """,
+        (negocio_id,),
+    )
+    return [
+        {
+            "producto": f["nombre"],
+            "precio": float(f["precio"] or 0),
+            "existencia": float(f["existencia"] or 0),
+            "minimo": float(f["minimo"] or 0),
+            "activo": bool(f["activo"]),
+        }
+        for f in filas
+    ]
+
+
 def tendencia_ventas(negocio_id, periodos=2):
     """Compara períodos consecutivos y describe el cambio porcentual."""
     filas = db.query(
