@@ -138,8 +138,9 @@ CREATE TABLE guateayuda.interaccion (
     CONSTRAINT ck_interaccion_intent
         CHECK (
             intent IS NULL
-            OR intent IN (
+            OR             intent IN (
                 'VENTA',
+                'COMPRA',
                 'GASTO',
                 'INVENTARIO',
                 'PRODUCCION',
@@ -299,6 +300,7 @@ CREATE TABLE guateayuda.transaccion (
         CHECK (
             tipo IN (
                 'VENTA',
+                'COMPRA',
                 'GASTO'
             )
         ),

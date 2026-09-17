@@ -15,6 +15,125 @@ document.addEventListener("DOMContentLoaded", () => {
     const dashboardKPIs = document.getElementById("kpi-ventas");
     if (dashboardKPIs) {
         cargarDashboard(negocioId);
+        cargarInteligencia(negocioId);
+    }
+
+    function _panelOk(contenedor, mensaje) {
+        contenedor.innerHTML = `<p class="ok-message"><i class="fa-solid fa-circle-check"></i> ${_esc(mensaje)}</p>`;
+    }
+
+    function _panelError(contenedor, mensaje) {
+        contenedor.innerHTML = `<p>${_esc(mensaje || "No se pudieron cargar los datos.")}</p>`;
+    }
+
+    function cargarInteligencia(negocioId) {
+        // Predicción de ventas (7 días)
+        fetch(`/api/negocio/${negocioId}/prediccion?dias=7`)
+            .then(res => res.json())
+            .then(data => {
+                const contenedor = document.getElementById("lista-prediccion");
+                if (!contenedor) return;
+                if (!data.disponible) {
+                    _panelOk(contenedor, data.mensaje || "Sin historial suficiente para predecir.");
+                    return;
+                }
+                const total = (data.predicciones || []).reduce((s, p) => s + Number(p.estimado || 0), 0);
+                const estado = data.estado === "modelo_ml" ? "Modelo ML"
+                             : data.estado === "mixto" ? "Mixto"
+                             : "Promedio histórico";
+                const filas = (data.predicciones || []).map(p =>
+                    `<div class="panel-row"><strong>${_esc(p.dia)}</strong><span>Q${Number(p.estimado || 0).toLocaleString()}</span></div>`
+                ).join("");
+                contenedor.innerHTML =
+                    `<div class="panel-meta"><span class="stock-tag">${_esc(estado)}</span>` +
+                    `<span>Próximos ${data.periodo_dias} días: <b>Q${total.toLocaleString()}</b></span></div>` + filas;
+            })
+            .catch(err => {
+                console.error("Error predicción:", err);
+                const contenedor = document.getElementById("lista-prediccion");
+                if (contenedor) _panelError(contenedor, "No se pudo generar la predicción.");
+            });
+
+        // Riesgo de inventario (demanda estimada)
+        fetch(`/api/negocio/${negocioId}/inventario-predictivo?dias=7`)
+            .then(res => res.json())
+            .then(data => {
+                const contenedor = document.getElementById("lista-inventario-riesgo");
+                if (!contenedor) return;
+                const enRiesgo = data.en_riesgo || [];
+                if (!enRiesgo.length) {
+                    _panelOk(contenedor, "Sin productos en riesgo en los próximos días.");
+                    return;
+                }
+                contenedor.innerHTML = enRiesgo.map(p => {
+                    const dias = p.dias_hasta_agotamiento !== null && p.dias_hasta_agotamiento !== undefined
+                        ? `${p.dias_hasta_agotamiento} días` : "stock bajo";
+                    let html = `<div class="panel-row"><strong>${_esc(p.producto)}</strong>` +
+                        `<span class="stock-tag">${_esc(dias)}</span></div>`;
+                    if (p.reposicion_sugerida) {
+                        html += `<div class="panel-sub">Sugerencia: reponer ≈ ${p.reposicion_sugerida} u. (estima ${p.consumo_diario}/día). Decides tú.</div>`;
+                    }
+                    return html;
+                }).join("");
+            })
+            .catch(err => {
+                console.error("Error inventario predictivo:", err);
+                const contenedor = document.getElementById("lista-inventario-riesgo");
+                if (contenedor) _panelError(contenedor, "No se pudo analizar el inventario.");
+            });
+
+        // Anomalías detectadas
+        fetch(`/api/negocio/${negocioId}/anomalias?dias=60`)
+            .then(res => res.json())
+            .then(data => {
+                const contenedor = document.getElementById("lista-anomalias");
+                if (!contenedor) return;
+                const areas = data.areas || {};
+                const todas = Object.keys(areas)
+                    .filter(k => areas[k].anomalias)
+                    .flatMap(k => areas[k].anomalias.map(a => ({ ...a, area: k })));
+                if (!data.disponible || todas.length === 0) {
+                    _panelOk(contenedor, data.mensaje || "Sin comportamientos inusuales en el periodo revisado.");
+                    return;
+                }
+                contenedor.innerHTML = todas.slice(0, 5).map(a => {
+                    const signo = a.direccion === "alta" ? "+" : "−";
+                    const etiqueta = a.area.charAt(0).toUpperCase() + a.area.slice(1);
+                    return `<div class="panel-row"><strong>${_esc(etiqueta)} · ${_esc(a.fecha)}</strong>` +
+                        `<span class="stock-tag">${signo}${Number(a.desviacion_porcentual || 0).toFixed(1)}%</span></div>` +
+                        `<div class="panel-sub">Requiere revisión.</div>`;
+                }).join("");
+            })
+            .catch(err => {
+                console.error("Error anomalías:", err);
+                const contenedor = document.getElementById("lista-anomalias");
+                if (contenedor) _panelError(contenedor, "No se pudieron detectar anomalías.");
+            });
+
+        // Recomendaciones accionables
+        fetch(`/api/negocio/${negocioId}/recomendaciones?dias=7`)
+            .then(res => res.json())
+            .then(data => {
+                const contenedor = document.getElementById("lista-recomendaciones");
+                if (!contenedor) return;
+                const items = data.recomendaciones || [];
+                if (!items.length) {
+                    _panelOk(contenedor, "Todo se ve dentro del patrón habitual del negocio.");
+                    return;
+                }
+                const clase = { "ALTA": "badge-alta", "MEDIA": "badge-media", "BAJA": "badge-baja" };
+                contenedor.innerHTML = items.map(r =>
+                    `<div class="reco-item">` +
+                    `<div class="reco-head"><span class="stock-tag ${clase[r.prioridad] || ""}">${_esc(r.prioridad)}</span>` +
+                    `<strong>${_esc(r.titulo)}</strong></div>` +
+                    `<div class="reco-desc">${_esc(r.accion_sugerida)}</div>` +
+                    `</div>`).join("");
+            })
+            .catch(err => {
+                console.error("Error recomendaciones:", err);
+                const contenedor = document.getElementById("lista-recomendaciones");
+                if (contenedor) _panelError(contenedor, "No se pudieron generar recomendaciones.");
+            });
     }
 
     function cargarDashboard(negocioId) {
@@ -106,7 +225,15 @@ document.addEventListener("DOMContentLoaded", () => {
         // Devuelve una línea legible con el detalle de una operación detectada.
         const t = op.operacion;
         if (op.tipo === "venta") {
-            return `<i class="fa-solid fa-cash-register" style="color:var(--green);"></i> Venta · ${_esc(t.producto)} × ${t.cantidad} a Q${t.precio_unitario}`;
+            let d = `<i class="fa-solid fa-cash-register" style="color:var(--green);"></i> Venta · ${_esc(t.producto)} × ${t.cantidad}`;
+            if (t.cliente) d += ` a ${_esc(t.cliente)}`;
+            if (t.precio_unitario) d += ` a Q${t.precio_unitario}`;
+            return d;
+        } else if (op.tipo === "compra") {
+            let d = `<i class="fa-solid fa-cart-shopping" style="color:#1565C0;"></i> Compra · ${_esc(t.producto)} × ${t.cantidad}`;
+            if (t.proveedor) d += ` a ${_esc(t.proveedor)}`;
+            if (t.precio_unitario) d += ` a Q${t.precio_unitario}`;
+            return d;
         } else if (op.tipo === "gasto") {
             return `<i class="fa-solid fa-receipt" style="color:#cc0000;"></i> Gasto · ${_esc(t.concepto || t.descripcion || "gasto")} por Q${t.monto}`;
         } else if (op.tipo === "inventario") {
@@ -147,8 +274,11 @@ document.addEventListener("DOMContentLoaded", () => {
         tokensSesion = operaciones.map(o => o.token_sesion);
         mensajesHumanos = operaciones.map(o => o.mensaje_humano);
 
-        const rowsHtml = operaciones.map(op =>
-            `<div class="op-row">${_descripcionOperacion(op)}</div>`).join("");
+        const rowsHtml = operaciones.map((op, idx) => {
+            const resumen = (op.resumen || body.resumen);
+            const texto = (typeof resumen === "string" && resumen) ? resumen : _descripcionOperacion(op);
+            return `<div class="op-row">${_esc(texto)}</div>`;
+        }).join("");
         let extra = "";
         if ((body.multiples || operaciones.length > 1)) {
             extra = `<div style="padding-top:8px;color:#5B7076;"><i class="fa-solid fa-info-circle"></i> Se detectaron ${operaciones.length} operaciones.</div>`;
@@ -202,7 +332,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 inputMensaje.value = "";
                 _append(`<div class="chat-msg msg-bot"><i class="fa-solid fa-circle-check" style="color:var(--green);"></i> ¡Operación(es) guardada(s) con éxito! El dashboard se actualizará.</div>`);
             } else {
-                _append(`<div class="chat-msg msg-bot">Algunas operaciones no se guardaron. Revisa e inténtalo de nuevo.</div>`);
+                const detalle = fallidas
+                    .map(r => r.mensaje || r.error || "operación inválida")
+                    .filter(Boolean)
+                    .join(" · ");
+                _append(`<div class="chat-msg msg-bot">No se pudo guardar: ${_esc(detalle)}. Revisa los datos (por ejemplo, en ventas indica el precio) e inténtalo de nuevo.</div>`);
             }
         })
         .catch(err => {

@@ -60,6 +60,13 @@ from analytics import (
     top_productos,
     ventas_por_dia,
 )
+from ml.anomaly import detectar_anomalias
+from ml.forecasting import pronostico_negocio
+from ml.inventory import analisis_inventario
+from ml.recommendations import (
+    generar_recomendaciones,
+    registrar_recomendaciones,
+)
 import interpreter
 import service
 
@@ -119,6 +126,133 @@ def _formato_q(monto):
         return f"Q{float(monto or 0):,.2f}"
     except (TypeError, ValueError):
         return "Q0.00"
+
+
+# ---------------------------------------------------------------------------
+# Respuestas de inteligencia (FASE 7): chat conectado al motor ML
+# ---------------------------------------------------------------------------
+
+def _respuesta_prediccion(negocio_id):
+    """Responde a una consulta de predicción con los datos del motor ML."""
+    dias = 7
+    try:
+        proy = pronostico_negocio(negocio_id, dias)
+    except Exception:
+        proy = {}
+    if not proy.get("disponible"):
+        return _consulta(
+            "prediccion",
+            proy.get("mensaje", "No hay suficientes datos para predecir tus ventas."),
+            datos=[],
+        )
+    total = sum(float(p.get("estimado") or 0) for p in proy.get("predicciones", []))
+    estado = proy.get("estado") or "fallback_estadistico"
+    etiqueta_metodo = {
+        "modelo_ml": "modelo estadístico (ML)",
+        "mixto": "modelo mixto",
+        "fallback_estadistico": "promedio histórico",
+    }.get(estado, "promedio histórico")
+    mensaje = (
+        f"Se estiman ventas de {_formato_q(total)} en los próximos {dias} días "
+        f"({etiqueta_metodo}). Es una estimación, no una certeza."
+    )
+    datos = [
+        {"etiqueta": "Ventas estimadas (7 días)", "valor": _formato_q(total)},
+        {"etiqueta": "Método", "valor": etiqueta_metodo.capitalize()},
+        {"etiqueta": "Estado", "valor": estado},
+    ]
+    return _consulta("prediccion", mensaje, datos=datos)
+
+
+def _respuesta_inventario_riesgo(negocio_id):
+    """Responde con los productos en riesgo de agotamiento."""
+    dias = 7
+    analisis = analisis_inventario(negocio_id, dias)
+    en_riesgo = analisis.get("en_riesgo", [])
+    if not en_riesgo:
+        return _consulta(
+            "inventario_riesgo",
+            "No se detectaron productos en riesgo de agotarse en los próximos "
+            f"{dias} días.",
+            datos=[],
+        )
+    nombres = ", ".join(p["producto"] for p in en_riesgo[:5])
+    mensaje = (
+        f"Hay {len(en_riesgo)} producto(s) con riesgo de quedarte sin stock en "
+        f"los próximos {dias} días: {nombres}. La reposición es solo una "
+        "sugerencia (no se realiza ninguna compra automática)."
+    )
+    datos = [
+        {
+            "etiqueta": p["producto"],
+            "valor": (f"{p.get('dias_hasta_agotamiento')} días · "
+                      f"riesgo {p.get('riesgo')} · reponer ≈ "
+                      f"{p.get('reposicion_sugerida')} u."),
+        }
+        for p in en_riesgo
+    ]
+    return _consulta("inventario_riesgo", mensaje, datos=datos)
+
+
+def _respuesta_anomalias(negocio_id):
+    """Responde con los comportamientos inusuales detectados."""
+    deteccion = detectar_anomalias(negocio_id, 60)
+    tot = deteccion.get("total_anomalias", 0)
+    areas = deteccion.get("areas", {})
+    todas = [
+        dict(a, area=area)
+        for area, bloque in areas.items()
+        for a in bloque.get("anomalias", [])
+    ]
+    if not tot or not todas:
+        return _consulta(
+            "anomalias",
+            deteccion.get("mensaje",
+                          "No se detectaron comportamientos inusuales en el "
+                          "periodo revisado."),
+            datos=[],
+        )
+    mensaje = (
+        f"Se detectaron {tot} comportamiento(s) que requieren revisión. "
+        "No se concluye fraude ni error: solo son datos fuera del patrón "
+        "habitual."
+    )
+    datos = [
+        {
+            "etiqueta": f"{a.get('area', '')} · {a.get('fecha')}",
+            "valor": (f"{a.get('desviacion_porcentual', 0):.1f}% "
+                      f"{'más' if a.get('direccion') == 'alta' else 'menos'} "
+                      f"de lo habitual · revisar"),
+        }
+        for a in todas[:6]
+    ]
+    return _consulta("anomalias", mensaje, datos=datos)
+
+
+def _respuesta_recomendaciones(negocio_id):
+    """Responde con las recomendaciones accionables del negocio."""
+    dias = 7
+    resultado = generar_recomendaciones(negocio_id, dias)
+    recomendaciones = resultado.get("recomendaciones", [])
+    if not recomendaciones:
+        return _consulta(
+            "recomendaciones",
+            "Todo se ve dentro del patrón habitual del negocio. No hay "
+            "recomendaciones urgentes por ahora.",
+            datos=[],
+        )
+    mensaje = (
+        f"Te dejo {len(recomendaciones)} recomendación(es) basadas en datos "
+        "reales del negocio (estimaciones, no certezas)."
+    )
+    datos = [
+        {
+            "etiqueta": r["titulo"],
+            "valor": f"[{r.get('prioridad')}] {r.get('accion_sugerida', '')}",
+        }
+        for r in recomendaciones
+    ]
+    return _consulta("recomendaciones", mensaje, datos=datos)
 
 
 def _respuesta_consulta(negocio_id, resultado):
@@ -237,6 +371,18 @@ def _respuesta_consulta(negocio_id, resultado):
                     {"etiqueta": "Productos activos", "valor": str(ind.get("productos_activos") or 0)},
                 ],
             )
+
+        if intencion == "prediccion":
+            return _respuesta_prediccion(negocio_id)
+
+        if intencion == "inventario_riesgo":
+            return _respuesta_inventario_riesgo(negocio_id)
+
+        if intencion == "anomalias":
+            return _respuesta_anomalias(negocio_id)
+
+        if intencion == "recomendaciones":
+            return _respuesta_recomendaciones(negocio_id)
 
     except Exception:
         return _consulta(intencion, "No pude consultar tus datos en este momento. Inténtalo de nuevo.")
@@ -818,6 +964,10 @@ def api_index():
             "GET /api/negocio/<id>/tendencia",
             "GET /api/negocio/<id>/perfil",
             "GET /api/negocio/<id>/proyeccion?dias=N",
+            "GET /api/negocio/<id>/prediccion?dias=N",
+            "GET /api/negocio/<id>/inventario-predictivo?dias=N",
+            "GET /api/negocio/<id>/anomalias?dias=N",
+            "GET /api/negocio/<id>/recomendaciones?dias=N",
             "POST /api/negocio/<id>/chat",
             "POST /api/negocio/<id>/operacion",
         ],
@@ -937,8 +1087,122 @@ def proyeccion_ep(negocio_id):
 
 
 # ---------------------------------------------------------------------------
+# Centro de Inteligencia (ML: predicción, inventario, anomalías, recomendación)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/negocio/<int:negocio_id>/prediccion")
+def prediccion_ep(negocio_id):
+    """Predicción de ventas del negocio para los próximos `dias` días."""
+    dias = request.args.get("dias", default=7, type=int)
+    try:
+        if not negocio_existe(negocio_id):
+            return _no_encontrado()
+        return jsonify(pronostico_negocio(negocio_id, dias))
+    except Exception as exc:
+        return _bd_error(exc)
+
+
+@app.get("/api/negocio/<int:negocio_id>/inventario-predictivo")
+def inventario_predictivo_ep(negocio_id):
+    """Análisis de riesgo de inventario por producto (demanda estimada)."""
+    dias = request.args.get("dias", default=7, type=int)
+    try:
+        if not negocio_existe(negocio_id):
+            return _no_encontrado()
+        return jsonify(analisis_inventario(negocio_id, dias))
+    except Exception as exc:
+        return _bd_error(exc)
+
+
+@app.get("/api/negocio/<int:negocio_id>/anomalias")
+def anomalias_ep(negocio_id):
+    """Detección de comportamientos fuera del patrón habitual."""
+    dias = request.args.get("dias", default=60, type=int)
+    try:
+        if not negocio_existe(negocio_id):
+            return _no_encontrado()
+        return jsonify(detectar_anomalias(negocio_id, dias))
+    except Exception as exc:
+        return _bd_error(exc)
+
+
+@app.get("/api/negocio/<int:negocio_id>/recomendaciones")
+def recomendaciones_ep(negocio_id):
+    """Recomendaciones accionables del negocio (se persisten en insight_ia)."""
+    dias = request.args.get("dias", default=7, type=int)
+    try:
+        if not negocio_existe(negocio_id):
+            return _no_encontrado()
+        resultado = generar_recomendaciones(negocio_id, dias)
+        guardadas = 0
+        try:
+            guardadas = registrar_recomendaciones(negocio_id, resultado, dias)
+        except Exception:
+            guardadas = 0
+        payload = dict(resultado)
+        payload["guardadas_en_insight"] = guardadas
+        return jsonify(payload)
+    except Exception as exc:
+        return _bd_error(exc)
+
+
+# ---------------------------------------------------------------------------
 # Chat IA (interpretación) y confirmación de operaciones
 # ---------------------------------------------------------------------------
+
+def _resumen_operacion(op):
+    """Genera una línea conversacional que resume una operación detectada
+    (sección 19). La estructura técnica queda interna.
+
+    Formato deseado (sección 19):
+        "¡Listo! Registré la venta de 120 piñas a José por Q12 cada una.
+         Total: Q1,440."
+    """
+    t = op.get("operacion") or {}
+    tipo = op.get("tipo")
+
+    try:
+        cantidad = int(t.get("cantidad") or 0)
+    except (TypeError, ValueError):
+        cantidad = 0
+    try:
+        precio = float(t.get("precio_unitario") or 0)
+    except (TypeError, ValueError):
+        precio = 0.0
+
+    producto = t.get("producto") or ""
+    total = round(cantidad * precio, 2)
+
+    if tipo == "venta":
+        linea = f"Venta de {cantidad} {producto}"
+        if t.get("cliente"):
+            linea += f" a {t.get('cliente')}"
+        if t.get("unidad"):
+            linea += f" ({t.get('unidad')})"
+        if precio:
+            linea += f" por {_fmt_q(precio)} cada una"
+        if total:
+            linea += f". Total: {_fmt_q(total)}"
+        return linea
+    if tipo == "compra":
+        linea = f"Compra de {cantidad} {producto}"
+        if t.get("proveedor"):
+            linea += f" a {t.get('proveedor')}"
+        if t.get("unidad"):
+            linea += f" ({t.get('unidad')})"
+        if precio:
+            linea += f" por {_fmt_q(precio)} cada una"
+        if total:
+            linea += f". Total: {_fmt_q(total)}"
+        return linea
+    if tipo == "gasto":
+        return f"Gasto de {_fmt_q(t.get('monto'))} en {t.get('concepto') or 'concepto'}"
+    if tipo == "inventario":
+        return f"Inventario de {t.get('producto')} ({t.get('existencia')} unidades)"
+    if tipo == "produccion":
+        return f"Producción de {t.get('cantidad')} unidades de {t.get('producto')}"
+    return op.get("tipo", "")
+
 
 @app.post("/api/negocio/<int:negocio_id>/chat")
 def chat(negocio_id):
@@ -998,6 +1262,7 @@ def chat(negocio_id):
             "operacion": r["operacion"],
             "mensaje_humano": r.get("mensaje_humano", mensaje),
             "errores": r.get("errores", []),
+            "resumen": _resumen_operacion(r),
         })
 
     # Respuesta con forma completa (lista) y compatibilidad con la forma
@@ -1007,12 +1272,14 @@ def chat(negocio_id):
         "interpretado": True,
         "multiples": len(operaciones) > 1,
         "operaciones": operaciones,
+        "mensaje": "Detecté la información. ¿Confirmas que es correcta?",
         # Compatibilidad: forma simple para clientes existentes.
         "tipo": primer["tipo"],
         "operacion": primer["operacion"],
         "token_sesion": primer["token_sesion"],
         "mensaje_humano": primer["mensaje_humano"],
         "errores": primer["errores"],
+        "resumen": primer["resumen"],
     })
 
 

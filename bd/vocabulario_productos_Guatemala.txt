@@ -1,0 +1,444 @@
+GUATEAYUDA — VOCABULARIO GUATEMALTECO PARA PRODUCTOS Y ALIMENTOS
+===============================================================
+
+Propósito:
+Lista inicial para alimentar el intérprete de lenguaje natural de GuateAyuda.
+Incluye nombres comunes en Guatemala, variantes coloquiales, regionalismos y
+algunos nombres en idiomas mayas que aparecen asociados a productos/alimentos.
+
+IMPORTANTE:
+- No todos los términos son sinónimos universales en todo Guatemala.
+- Algunos son regionales o pertenecen a idiomas mayas específicos.
+- Conviene guardar el término como alias y asociarlo a un producto canónico.
+- Para el intérprete, NO asumir que una palabra aislada representa una venta:
+  revisar cantidad, precio, cliente, proveedor y verbo/acción de la oración.
+
+---------------------------------------------------------------
+1. FRUTAS
+---------------------------------------------------------------
+
+Producto canónico: piña
+Alias: piña, piñas, chöp, ch'op
+
+Producto canónico: banano
+Alias: banano, bananos, guineo, guineos, banana, bananas, saq'ul, tul
+
+Producto canónico: plátano
+Alias: plátano, plátanos, plátano maduro, plátano verde, sakitul
+
+Producto canónico: naranja
+Alias: naranja, naranjas, chin, xna'j, chiin
+
+Producto canónico: jocote
+Alias: jocote, jocotes, q'anum, rum
+
+Producto canónico: aguacate
+Alias: aguacate, aguacates, palta, oj, ooj
+
+Producto canónico: mango
+Alias: mango, mangos, mango verde, mango maduro, q'ana tzu'ub'
+
+Producto canónico: papaya
+Alias: papaya, papayas, putul
+
+Producto canónico: guayaba
+Alias: guayaba, guayabas, pata
+
+Producto canónico: zapote
+Alias: zapote, zapotes, tulul, saltul
+
+Producto canónico: nance
+Alias: nance, nances, chi', atapa'l
+
+Producto canónico: coco
+Alias: coco, cocos, k'ox
+
+Producto canónico: anona
+Alias: anona, anonas, tz'umuy
+
+Producto canónico: limón
+Alias: limón, limones, lamunx
+
+Producto canónico: lima
+Alias: lima, limas, liim
+
+Producto canónico: mandarina
+Alias: mandarina, mandarinas, mantariin
+
+Producto canónico: toronja
+Alias: toronja, toronjas, toronj
+
+Producto canónico: durazno
+Alias: durazno, duraznos, turas, lorans
+
+Producto canónico: pera
+Alias: pera, peras, peer
+
+Producto canónico: manzana
+Alias: manzana, manzanas, nimamixku'
+
+Producto canónico: fresa
+Alias: fresa, fresas, kaqatonka
+
+Producto canónico: sandía
+Alias: sandía, sandías, kaqaq'oq
+
+Producto canónico: uva
+Alias: uva, uvas, uub'
+
+Producto canónico: níspero / chico
+Alias: níspero, nísperos, chico, chicos, mayatze, miispr
+
+---------------------------------------------------------------
+2. VERDURAS, HORTALIZAS Y CULTIVOS
+---------------------------------------------------------------
+
+Producto canónico: tomate
+Alias: tomate, tomates, pix, xkoya', pixp
+
+Producto canónico: miltomate
+Alias: miltomate, miltomates, tzookpixp, kaxlan pix
+
+Producto canónico: tomatillo
+Alias: tomatillo, tomatillos, ch'ampixp
+
+Producto canónico: güisquil
+Alias: güisquil, güisquiles, ch'ima', k'ix, ch'umaah
+
+Producto canónico: güicoy
+Alias: güicoy, güicoyes, güicoyito, güicoyitos, mukun, muhkun
+
+Producto canónico: ayote
+Alias: ayote, ayotes, k'um, k'uum
+
+Producto canónico: chilacayote
+Alias: chilacayote, chilacayotes, q'oq', q'ohq'
+
+Producto canónico: pepino
+Alias: pepino, pepinos, tzetz, kok' k'um
+
+Producto canónico: cebolla
+Alias: cebolla, cebollas, xnakät, seb'ooy, sib'olix, chunakat
+
+Producto canónico: ajo
+Alias: ajo, ajos, anx, anxux
+
+Producto canónico: chile
+Alias: chile, chiles, ik, iik, chile pimiento, pimiento
+
+Producto canónico: chiltepe
+Alias: chiltepe, chiltepes, tz'i'iik
+
+Producto canónico: ejote
+Alias: ejote, ejotes, rax kina', q'ap, pejk', ixb'ehb', loo'
+
+Producto canónico: papa
+Alias: papa, papas, kaxlan is, kaxian is, paaps
+
+Producto canónico: yuca
+Alias: yuca, yucas, tzin, tz'iin
+
+Producto canónico: malanga
+Alias: malanga, malangas, ox, oom
+
+Producto canónico: camote
+Alias: camote, camotes, is, iis
+
+Producto canónico: zanahoria
+Alias: zanahoria, zanahorias, q'an xe', q' anxe'
+
+Producto canónico: remolacha
+Alias: remolacha, remolachas, raxtiint xe', kik'aa'
+
+Producto canónico: repollo
+Alias: repollo, repollos, torol ichaj, tolichaaj
+
+Producto canónico: brócoli
+Alias: brócoli, brócolis, raxwak'
+
+Producto canónico: coliflor
+Alias: coliflor, coliflores, saqwak'
+
+Producto canónico: lechuga
+Alias: lechuga, lechugas, mot'ichaaj
+
+Producto canónico: apio
+Alias: apio, apios, kaxisk'i'ij, aapyo
+
+Producto canónico: berro
+Alias: berro, berros, b'ero
+
+Producto canónico: bledo
+Alias: bledo, bledos, k'exk', k'axk'
+
+Producto canónico: chipilín
+Alias: chipilín, chipilines, much', muuch'
+
+Producto canónico: macuy
+Alias: macuy, macuyes, imut
+
+Producto canónico: pacaya
+Alias: pacaya, pacayas, k'iib', pakay
+
+Producto canónico: elote
+Alias: elote, elotes, elotito, elotitos, äj, k'uxuuj, ajn
+
+Producto canónico: jilote
+Alias: jilote, jilotes, och
+
+Producto canónico: flor de izote
+Alias: flor de izote, izote, flores de izote, uhtz'ub'
+
+Producto canónico: hongos
+Alias: hongos, hongo, oköx, okox
+
+Producto canónico: perulero
+Alias: perulero, peruleros
+
+---------------------------------------------------------------
+3. GRANOS, LEGUMBRES Y BÁSICOS
+---------------------------------------------------------------
+
+Producto canónico: frijol
+Alias: frijol, frijoles, frijol negro, frijol rojo, frijol blanco, kinaq'
+
+Producto canónico: frijol blanco
+Alias: frijol blanco, frijoles blancos, saqkinaq'
+
+Producto canónico: maíz
+Alias: maíz, maiz, grano de maíz, maicito
+
+Producto canónico: arroz
+Alias: arroz, arroces, arroz blanco
+
+Producto canónico: haba
+Alias: haba, habas
+
+Producto canónico: arveja
+Alias: arveja, arvejas, alb'erte
+
+---------------------------------------------------------------
+4. CARNES, AVES, PESCADOS Y EMBUTIDOS
+---------------------------------------------------------------
+
+Producto canónico: pollo
+Alias: pollo, pollos, pollo entero, pollo por libra
+
+Producto canónico: gallina
+Alias: gallina, gallinas, gallinita, äk' (uso en fuente Kaqchikel para pollo)
+
+Producto canónico: carne de res
+Alias: carne, carne de res, res, posta, bistec
+
+Producto canónico: carne de cerdo
+Alias: carne de cerdo, cerdo, puerco, marrano
+
+Producto canónico: pescado
+Alias: pescado, pescados, pez, filete de pescado
+
+Producto canónico: camarón
+Alias: camarón, camarones, chom
+
+Producto canónico: chorizo
+Alias: chorizo, chorizos
+
+Producto canónico: longaniza
+Alias: longaniza, longanizas
+
+Producto canónico: salchicha
+Alias: salchicha, salchichas
+
+Producto canónico: jamón
+Alias: jamón, jamones
+
+---------------------------------------------------------------
+5. LÁCTEOS Y PRODUCTOS PROCESADOS
+---------------------------------------------------------------
+
+Producto canónico: leche
+Alias: leche, leche líquida, leche en polvo
+
+Producto canónico: queso
+Alias: queso, quesos, queso fresco
+
+Producto canónico: crema
+Alias: crema, cremas
+
+Producto canónico: mantequilla
+Alias: mantequilla
+
+Producto canónico: incaparina
+Alias: incaparina
+
+---------------------------------------------------------------
+6. PANES Y PRODUCTOS DE MAÍZ
+---------------------------------------------------------------
+
+Producto canónico: pan
+Alias: pan, panes, pan francés, francés, pan dulce
+
+Producto canónico: tortilla
+Alias: tortilla, tortillas, tortillitas, tortilla de maíz
+
+Producto canónico: tamal
+Alias: tamal, tamales
+
+Producto canónico: chuchito
+Alias: chuchito, chuchitos
+
+Producto canónico: pache
+Alias: pache, paches
+
+Producto canónico: tostada
+Alias: tostada, tostadas
+
+Producto canónico: rellenito
+Alias: rellenito, rellenitos
+
+Producto canónico: chancleta
+Alias: chancleta, chancletas
+
+Producto canónico: mole
+Alias: mole
+
+Producto canónico: pepián
+Alias: pepián, pepian
+
+Producto canónico: jocón
+Alias: jocón, jocon
+
+---------------------------------------------------------------
+7. BEBIDAS Y PRODUCTOS DE CONSUMO
+---------------------------------------------------------------
+
+Producto canónico: café
+Alias: café, cafecito, café molido, café en grano
+
+Producto canónico: atol
+Alias: atol, atoles, atol de elote
+
+Producto canónico: chocolate
+Alias: chocolate, chocolates, chocolate de taza
+
+Producto canónico: fresco
+Alias: fresco, frescos, fresco natural, fresco de fruta
+
+Producto canónico: agua
+Alias: agua, botella de agua, agua pura
+
+---------------------------------------------------------------
+8. TÉRMINOS GENERALES DE MERCADERÍA
+---------------------------------------------------------------
+
+mercadería
+producto
+productos
+artículo
+artículos
+venta
+ventas
+pedido
+pedidos
+encargo
+encargos
+lote
+lotes
+paquete
+paquetes
+docena
+docenas
+unidad
+unidades
+libra
+libras
+quintal
+quintales
+arroba
+arrobas
+caja
+cajas
+saco
+sacos
+costal
+costales
+bulto
+bultos
+
+---------------------------------------------------------------
+9. REGLAS RECOMENDADAS PARA EL INTÉRPRETE
+---------------------------------------------------------------
+
+1. Un alias de producto NO significa automáticamente que existe una venta.
+
+2. Detectar primero la INTENCIÓN:
+   venta, compra, gasto, producción, inventario, consulta, etc.
+
+3. Detectar entidades:
+   producto, cantidad, precio, cliente, proveedor, fecha y unidad.
+
+4. Ejemplo:
+   "A José le vendí 120 piñas a Q12"
+   Debe interpretarse como:
+   acción = venta
+   cliente = José
+   cantidad = 120
+   producto = piña
+   precio_unitario = Q12
+
+5. "Compré 3 cajas de guineo"
+   acción = compra
+   cantidad = 3
+   unidad = cajas
+   producto = banano/guineo
+
+6. "Tengo 50 güisquiles"
+   acción = inventario
+   cantidad = 50
+   producto = güisquil
+
+7. "Produje 100 chuchitos"
+   acción = producción
+   cantidad = 100
+   producto = chuchito
+
+8. "Vendí 10 panes a Q2 cada uno"
+   acción = venta
+   cantidad = 10
+   producto = pan
+   precio_unitario = Q2
+
+9. Si aparecen números antes/después de un producto, determinar por contexto
+   si representan cantidad, precio, peso, fecha o código.
+
+10. "A José", "para José", "le vendí a José" deben favorecer la interpretación
+    de José como PERSONA/CLIENTE, no como producto.
+
+11. Las formas con faltas ortográficas frecuentes pueden normalizarse:
+    guisquil -> güisquil
+    guicoy -> güicoy
+    pepian -> pepián
+    jocon -> jocón
+    maiz -> maíz
+    limon -> limón
+    platano -> plátano
+    jabon -> jabón (si se incorpora posteriormente al catálogo)
+
+12. No convertir automáticamente nombres de personas, clientes o proveedores
+    en productos solo porque coincidan parcialmente con un alias.
+
+---------------------------------------------------------------
+10. FUENTES CONSULTADAS
+---------------------------------------------------------------
+
+- Academia/Universidad: estudio "El vocabulario usado por los jóvenes en
+  Guatemala para nombrar a los alimentos", que reporta 398 palabras
+  diferentes y categorías de alimentos.
+- Curanderas Transformando Guatemala: vocabulario Kaqchikel/Español para
+  mercado, frutas y verduras.
+- Materiales académicos de la Universidad de San Carlos de Guatemala con
+  vocabulario de productos agrícolas.
+- Materiales de vocabulario Q'eqchi' con equivalencias de frutas y verduras.
+
+Nota: Esta lista es una base inicial para NLP. Los términos mayas deben
+mantenerse identificados por idioma/región cuando se incorporen a producción,
+porque una misma palabra o variante puede no ser universal en Guatemala.

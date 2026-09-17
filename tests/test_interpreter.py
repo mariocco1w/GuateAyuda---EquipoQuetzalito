@@ -31,9 +31,13 @@ def test_venta_cafe():
 
 
 def test_venta_con_palabras():
+    # Los números escritos se normalizan a numéricos (sección 11 del plan).
     r = interpretar("Hoy vendí diez panes con pollo a quince quetzales cada uno")
-    # "diez" y "quince" son palabras, no números; el parser numérico no las lee.
-    assert r["interpretado"] is False or r["operacion"]["cantidad"] is None
+    assert r["interpretado"] is True
+    assert r["tipo"] == "venta"
+    assert r["operacion"]["cantidad"] == 10
+    assert r["operacion"]["precio_unitario"] == 15
+    assert r["operacion"]["producto"] in ("panes", "panes pollo", "pan", "pan pollo")
 
 
 def test_gasto_verduras():
@@ -182,7 +186,7 @@ def test_multiples_texto_largo():
     venta = [r for r in interpretados if r["tipo"] == "venta"][0]["operacion"]
     assert inv["movimiento"] == "ENTRADA"
     assert inv["existencia"] == 20
-    assert inv["producto"] == "tortillas"
+    assert inv["producto"] == "tortilla"
     assert venta["cantidad"] == 35
     assert venta["producto"] == "gaseosas"
 
@@ -207,3 +211,78 @@ def test_consulta_despedida():
         r = interpretar(msg)
         assert r["consulta"] is True, msg
         assert r["tipo"] == "despedida", msg
+
+
+# ---------------------------------------------------------------------------
+# FASE 7: consultas de inteligencia (predicción, inventario, anomalías,
+# recomendaciones)
+# ---------------------------------------------------------------------------
+
+def test_consulta_prediccion():
+    for msg in (
+        "¿Cuánto crees que venderé esta semana?",
+        "¿Cómo van a estar mis ventas?",
+        "Predice mis ventas",
+        "¿Cuál será mi pronóstico de ventas?",
+        "¿Cuánto estimas que venda?",
+    ):
+        r = interpretar(msg)
+        assert r["consulta"] is True, msg
+        assert r["tipo"] == "prediccion", msg
+
+
+def test_consulta_inventario_riesgo():
+    for msg in (
+        "¿Qué productos se van a agotar?",
+        "¿Qué productos están en riesgo?",
+        "¿Cuándo se agota mi inventario?",
+        "¿Qué me va a faltar?",
+    ):
+        r = interpretar(msg)
+        assert r["consulta"] is True, msg
+        assert r["tipo"] == "inventario_riesgo", msg
+
+
+def test_consulta_anomalias():
+    for msg in (
+        "¿Detectaste algo extraño?",
+        "¿Hay alguna anomalía?",
+        "¿Algún movimiento raro?",
+        "¿Algo fuera de lo normal?",
+    ):
+        r = interpretar(msg)
+        assert r["consulta"] is True, msg
+        assert r["tipo"] == "anomalias", msg
+
+
+def test_consulta_recomendaciones():
+    for msg in (
+        "¿Qué me recomiendas?",
+        "Dame una recomendación",
+        "¿Qué debería mejorar?",
+        "¿Cómo puedo mejorar?",
+    ):
+        r = interpretar(msg)
+        assert r["consulta"] is True, msg
+        assert r["tipo"] == "recomendaciones", msg
+
+
+def test_consulta_prediccion_no_roba_venta():
+    r = interpretar("Vendí 8 almuerzos a Q25")
+    assert r["tipo"] == "venta"
+    assert not r.get("consulta")
+
+
+def test_inventario_quetzaltecas():
+    """Marcas con 'quetzal' en el nombre no deben confundirse con moneda."""
+    for frase in (
+        "tengo 105 quetzaltecas",
+        "Me quedan 105 quetzaltecas",
+        "ingresaron 105 quetzaltecas",
+        "agregue 105 quetzaltecas al inventario",
+    ):
+        r = interpretar(frase)
+        assert r.get("interpretado") is True, frase
+        assert r.get("tipo") == "inventario", frase
+        assert r["operacion"]["producto"] == "quetzaltecas", frase
+        assert r["operacion"]["existencia"] == 105, frase

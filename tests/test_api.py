@@ -140,3 +140,243 @@ def test_operacion_con_token_invalido(client):
     r = client.post("/api/negocio/1/operacion",
                     json={"token_sesion": "invalido", "mensaje_humano": "x"})
     assert r.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Centro de Inteligencia (FASE 6)
+# ---------------------------------------------------------------------------
+
+def test_prediccion_ventas(client, monkeypatch):
+    def fake(negocio_id, dias):
+        return {
+            "disponible": True,
+            "estado": "modelo_ml",
+            "negocio_id": negocio_id,
+            "periodo_dias": dias,
+            "predicciones": [{"dia": "2026-09-05", "estimado": 100.0}],
+            "por_producto": [],
+            "mensaje": "Predicción (estimación, no certeza).",
+        }
+    monkeypatch.setattr(app_module, "pronostico_negocio", fake)
+    r = client.get("/api/negocio/1/prediccion?dias=7")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["disponible"] is True
+    assert data["periodo_dias"] == 7
+    assert data["predicciones"][0]["estimado"] == 100.0
+
+
+def test_inventario_predictivo(client, monkeypatch):
+    def fake(negocio_id, dias):
+        return {
+            "disponible": True,
+            "negocio_id": negocio_id,
+            "periodo_dias": dias,
+            "productos": [],
+            "en_riesgo": [],
+            "sin_datos": [],
+            "mensaje": "ok",
+        }
+    monkeypatch.setattr(app_module, "analisis_inventario", fake)
+    r = client.get("/api/negocio/1/inventario-predictivo?dias=7")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["disponible"] is True
+    assert data["periodo_dias"] == 7
+
+
+def test_anomalias(client, monkeypatch):
+    def fake(negocio_id, dias):
+        return {
+            "disponible": False,
+            "negocio_id": negocio_id,
+            "periodo_dias": dias,
+            "areas": {},
+            "total_anomalias": 0,
+            "mensaje": "Sin comportamientos inusuales en el periodo revisado.",
+        }
+    monkeypatch.setattr(app_module, "detectar_anomalias", fake)
+    r = client.get("/api/negocio/1/anomalias?dias=30")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["total_anomalias"] == 0
+    assert not data["disponible"]
+
+
+def test_recomendaciones_y_persistencia(client, monkeypatch):
+    llamadas = []
+
+    def fake_gen(negocio_id, dias):
+        return {
+            "disponible": True,
+            "negocio_id": negocio_id,
+            "periodo_dias": dias,
+            "recomendaciones": [{
+                "tipo": "inventario", "prioridad": "ALTA", "titulo": "Riesgo",
+                "explicacion": "e", "accion_sugerida": "a", "origen": "inventario",
+            }],
+            "total": 1,
+            "mensaje": "ok",
+        }
+
+    def fake_reg(negocio_id, resultado, dias):
+        llamadas.append((negocio_id, resultado, dias))
+        return len(resultado.get("recomendaciones", []))
+
+    monkeypatch.setattr(app_module, "generar_recomendaciones", fake_gen)
+    monkeypatch.setattr(app_module, "registrar_recomendaciones", fake_reg)
+    r = client.get("/api/negocio/1/recomendaciones?dias=7")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["total"] == 1
+    assert data["guardadas_en_insight"] == 1
+    assert llamadas[0][0] == 1
+
+
+def test_recomendaciones_sin_persistencia_no_rompe(client, monkeypatch):
+    def fake_gen(negocio_id, dias):
+        return {
+            "disponible": True,
+            "negocio_id": negocio_id,
+            "recomendaciones": [],
+            "total": 0,
+            "mensaje": "ok",
+        }
+
+    def fake_reg(negocio_id, resultado, dias):
+        raise RuntimeError("base de datos no disponible")
+
+    monkeypatch.setattr(app_module, "generar_recomendaciones", fake_gen)
+    monkeypatch.setattr(app_module, "registrar_recomendaciones", fake_reg)
+    r = client.get("/api/negocio/1/recomendaciones?dias=7")
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["total"] == 0
+    assert data["guardadas_en_insight"] == 0
+
+
+def test_prediccion_negocio_no_existe(client, monkeypatch):
+    monkeypatch.setattr(app_module, "negocio_existe", lambda nid: None)
+    r = client.get("/api/negocio/999/prediccion")
+    assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# FASE 7: chat conectado al centro de inteligencia
+# ---------------------------------------------------------------------------
+
+def test_chat_prediccion(client, monkeypatch):
+    def fake(nid, dias):
+        return {
+            "disponible": True, "estado": "modelo_ml", "periodo_dias": dias,
+            "predicciones": [{"dia": "2026-09-05", "estimado": 100.0}],
+            "por_producto": [], "mensaje": "ok",
+        }
+    monkeypatch.setattr(app_module, "pronostico_negocio", fake)
+    r = client.post("/api/negocio/1/chat",
+                    json={"mensaje": "Predice mis ventas"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "prediccion"
+    assert "estimación" in data["mensaje"].lower() or "estiman" in data["mensaje"].lower()
+
+
+def test_chat_prediccion_sin_datos(client, monkeypatch):
+    def fake(nid, dias):
+        return {"disponible": False, "mensaje": "No hay datos suficientes."}
+    monkeypatch.setattr(app_module, "pronostico_negocio", fake)
+    r = client.post("/api/negocio/1/chat",
+                    json={"mensaje": "¿Cuánto crees que venderé?"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "prediccion"
+    assert "No hay" in data["mensaje"]
+
+
+def test_chat_inventario_riesgo(client, monkeypatch):
+    def fake(nid, dias):
+        return {
+            "disponible": True, "en_riesgo": [
+                {"producto": "Almuerzo", "dias_hasta_agotamiento": 3.0,
+                 "riesgo": "ALTO", "reposicion_sugerida": 20},
+            ],
+            "productos": [], "sin_datos": [], "mensaje": "ok",
+        }
+    monkeypatch.setattr(app_module, "analisis_inventario", fake)
+    r = client.post("/api/negocio/1/chat",
+                    json={"mensaje": "¿Qué productos se van a agotar?"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "inventario_riesgo"
+    assert data["datos"][0]["etiqueta"] == "Almuerzo"
+
+
+def test_chat_inventario_riesgo_sin_riesgo(client, monkeypatch):
+    monkeypatch.setattr(app_module, "analisis_inventario",
+                        lambda nid, dias: {"en_riesgo": [], "disponible": True})
+    r = client.post("/api/negocio/1/chat",
+                    json={"mensaje": "¿Qué productos están en riesgo?"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "inventario_riesgo"
+    assert "no se detectaron" in data["mensaje"].lower()
+
+
+def test_chat_anomalias(client, monkeypatch):
+    def fake(nid, dias):
+        return {
+            "disponible": True, "total_anomalias": 1,
+            "areas": {"ventas": {"anomalias": [{
+                "fecha": "2026-08-22", "desviacion_porcentual": 31.0,
+                "direccion": "alta", "requiere_revision": True,
+            }]}},
+            "mensaje": "ok",
+        }
+    monkeypatch.setattr(app_module, "detectar_anomalias", fake)
+    r = client.post("/api/negocio/1/chat",
+                    json={"mensaje": "¿Detectaste algo extraño?"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "anomalias"
+    assert "requieren revisión" in data["mensaje"].lower()
+
+
+def test_chat_anomalias_sin_hallazgos(client, monkeypatch):
+    monkeypatch.setattr(app_module, "detectar_anomalias",
+                        lambda nid, dias: {"disponible": False,
+                                           "total_anomalias": 0,
+                                           "areas": {}})
+    r = client.post("/api/negocio/1/chat", json={"mensaje": "¿Hay anomalías?"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "anomalias"
+    assert "no se detectaron" in data["mensaje"].lower()
+
+
+def test_chat_recomendaciones(client, monkeypatch):
+    def fake(nid, dias):
+        return {
+            "disponible": True,
+            "recomendaciones": [{
+                "tipo": "inventario", "prioridad": "ALTA", "titulo": "Riesgo",
+                "explicacion": "e", "accion_sugerida": "Revisa inventario.",
+                "origen": "inventario",
+            }],
+            "total": 1, "mensaje": "ok",
+        }
+    monkeypatch.setattr(app_module, "generar_recomendaciones", fake)
+    r = client.post("/api/negocio/1/chat",
+                    json={"mensaje": "¿Qué me recomiendas?"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "recomendaciones"
+    assert data["datos"][0]["valor"].startswith("[ALTA]")
+
+
+def test_chat_recomendaciones_vacias(client, monkeypatch):
+    monkeypatch.setattr(app_module, "generar_recomendaciones",
+                        lambda nid, dias: {"recomendaciones": [], "total": 0})
+    r = client.post("/api/negocio/1/chat", json={"mensaje": "¿Qué me sugieres?"})
+    data = r.get_json()
+    assert data["consulta"] is True
+    assert data["tipo"] == "recomendaciones"

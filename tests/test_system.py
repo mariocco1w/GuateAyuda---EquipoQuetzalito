@@ -127,3 +127,39 @@ def test_configuracion_route(client):
     assert r.status_code == 200
 
 
+def test_guardar_compra_persistencia():
+    """Verifica que guardar una compra crea/asocia producto, suma inventario
+    y registra la transacción como COMPRA con el proveedor."""
+    db.init_sqlite_db(clear=True)
+    db.execute(
+        "INSERT INTO negocio (id, nombre, propietario, actividad_principal) "
+        "VALUES (?, ?, ?, ?)",
+        (1, "Comedor Doña María (DEMO)", "María Xitumul", "Venta de alimentos"),
+    )
+
+    resultado = service.guardar_compra(1, {
+        "producto": "tomates",
+        "cantidad": 100,
+        "precio_unitario": 5,
+        "proveedor": "Don Pedro",
+    })
+
+    assert resultado["tipo"] == "compra"
+    assert resultado["cantidad"] == 100
+
+    # El producto se creó con inventario = 100
+    p = db.query_one(
+        "SELECT id, existencia FROM producto WHERE negocio_id = 1 AND LOWER(nombre) = 'tomates'"
+    )
+    assert p is not None
+    assert p["existencia"] == 100
+
+    # La transacción tiene tipo COMPRA y guarda el proveedor en atributos
+    t = db.query_one(
+        "SELECT tipo, atributos FROM transaccion WHERE negocio_id = 1 ORDER BY id DESC LIMIT 1"
+    )
+    assert t["tipo"] == "COMPRA"
+    assert "Don Pedro" in str(t["atributos"])
+
+
+
